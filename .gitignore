@@ -1,0 +1,19 @@
+# Node
+node_modules/
+dist/
+
+# Env
+.env
+.env.local
+.env.*.local
+
+# IDE
+.idea/
+.vscode/
+
+# Prisma
+prisma/migrations/
+
+# OS
+.DS_Store
+Thumbs.db
