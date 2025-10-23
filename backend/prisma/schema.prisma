@@ -1,0 +1,223 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
+}
+
+enum UserRole {
+  READER
+  AUTHOR
+  MODERATOR
+  ADMIN
+}
+
+enum NovelStatus {
+  DRAFT
+  REVIEWING
+  PUBLISHED
+  BLOCKED
+}
+
+enum TaskStatus {
+  OPEN
+  LOCKED
+  AWAITING_AUTHOR
+  AWAITING_REVIEW
+  CLOSED
+  ESCALATED
+}
+
+model User {
+  id                   Int       @id @default(autoincrement())
+  email                String?   @unique
+  username             String?   @unique
+  password             String
+  displayName          String?
+  emailConfirmed       Boolean   @default(false)
+  emailConfirmToken    String?   @db.VarChar(255)
+  emailConfirmExpires  DateTime?
+  passwordResetToken   String?   @db.VarChar(255)
+  passwordResetExpires DateTime?
+  avatarUrl            String?
+  role                 UserRole  @default(READER)
+  createdAt            DateTime  @default(now())
+
+  novels   Novel[]
+  comments Comment[]
+  ratings  Rating[]
+  follows  Follow[]
+  views    ViewHistory[]
+  reports  Report[]
+
+  processedReports Report[] @relation("ProcessedBy")
+
+  notifications Notification[]
+}
+
+model Novel {
+  id            Int         @id @default(autoincrement())
+  authorId      Int
+  author        User        @relation(fields: [authorId], references: [id])
+  title         String
+  description   String?
+  status        NovelStatus @default(DRAFT)
+  coverUrl      String?
+  autoPublished Boolean     @default(false)
+  publishedAt   DateTime?
+  wordCount     Int?
+  flagged       Boolean     @default(false)
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  chapters  Chapter[]
+  comments  Comment[]
+  ratings   Rating[]
+  tags      NovelTag[]
+  followers Follow[]
+  views     ViewHistory[]
+
+  @@index([title])
+  @@index([status])
+  @@index([authorId])
+}
+
+model Chapter {
+  id        Int           @id @default(autoincrement())
+  novelId   Int
+  novel     Novel         @relation(fields: [novelId], references: [id])
+  title     String
+  content   String        @db.Text
+  wordCount Int?
+  order     Int
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+  comments  Comment[]
+  views     ViewHistory[]
+
+  @@unique([novelId, order])
+}
+
+model Comment {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  user      User     @relation(fields: [userId], references: [id])
+  novelId   Int?
+  novel     Novel?   @relation(fields: [novelId], references: [id])
+  chapterId Int?
+  chapter   Chapter? @relation(fields: [chapterId], references: [id])
+  text      String   @db.Text
+  createdAt DateTime @default(now())
+}
+
+model Rating {
+  id      Int   @id @default(autoincrement())
+  novelId Int
+  novel   Novel @relation(fields: [novelId], references: [id])
+  userId  Int
+  user    User  @relation(fields: [userId], references: [id])
+  score   Int
+
+  @@unique([novelId, userId])
+}
+
+model Tag {
+  id     Int        @id @default(autoincrement())
+  name   String     @unique
+  novels NovelTag[]
+}
+
+model NovelTag {
+  novelId Int
+  tagId   Int
+  novel   Novel @relation(fields: [novelId], references: [id])
+  tag     Tag   @relation(fields: [tagId], references: [id])
+
+  @@id([novelId, tagId])
+}
+
+model Follow {
+  userId    Int
+  novelId   Int
+  user      User     @relation(fields: [userId], references: [id])
+  novel     Novel    @relation(fields: [novelId], references: [id])
+  createdAt DateTime @default(now())
+
+  @@id([userId, novelId])
+}
+
+model ViewHistory {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  user      User     @relation(fields: [userId], references: [id])
+  novelId   Int?
+  novel     Novel?   @relation(fields: [novelId], references: [id])
+  chapterId Int?
+  chapter   Chapter? @relation(fields: [chapterId], references: [id])
+  viewedAt  DateTime @default(now())
+}
+
+model Report {
+  id              Int       @id @default(autoincrement())
+  reporterId      Int
+  reporter        User      @relation(fields: [reporterId], references: [id])
+  targetType      String
+  targetId        Int
+  reason          String
+  detail          String?
+  createdAt       DateTime  @default(now())
+  processed       Boolean   @default(false)
+  processedBy     Int?
+  processedByUser User?     @relation("ProcessedBy", fields: [processedBy], references: [id])
+  processedAt     DateTime?
+  actionTaken     String?
+  actionTakenNote String?
+
+  taskId Int?
+  task   ModerationTask? @relation("ReportTask", fields: [taskId], references: [id])
+
+  @@index([targetType, targetId])
+  @@index([reporterId])
+}
+
+model ModerationTask {
+  id                 Int        @id @default(autoincrement())
+  targetType         String
+  targetId           Int
+  createdBy          Int?
+  createdAt          DateTime   @default(now())
+  status             TaskStatus @default(OPEN)
+  lockedBy           Int?
+  lockedAt           DateTime?
+  assignedTo         Int?
+  lastNotifiedAt     DateTime?
+  lastAuthorActionAt DateTime?
+  closedBy           Int?
+  closedAt           DateTime?
+  reportCount        Int        @default(0)
+  note               String?
+
+  reports Report[] @relation("ReportTask")
+
+  @@index([targetType, targetId])
+}
+
+model Notification {
+  id         Int      @id @default(autoincrement())
+  userId     Int?
+  type       String
+  targetType String?
+  targetId   Int?
+  taskId     Int?
+  actorId    Int?
+  message    String
+  read       Boolean  @default(false)
+  createdAt  DateTime @default(now())
+
+  user User? @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+}
