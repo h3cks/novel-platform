@@ -1,6 +1,5 @@
 import sanitizeHtml from 'sanitize-html';
 
-
 /**
  * Санітизує HTML контент, дозволяє базові теги (потрібно для безпеки)
  */
@@ -28,15 +27,16 @@ export function sanitizeContent(html: string) {
   });
 }
 
-
 /**
  * Повертає чистий текст з HTML (без тегів)
  */
 export function stripHtml(html: string) {
   const cleaned = sanitizeContent(html);
-  return cleaned.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+  return cleaned
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
 }
-
 
 /**
  * Рахує слова в HTML-контенті (після санітизації)
@@ -46,7 +46,6 @@ export function countWordsFromHtml(html: string) {
   if (!text) return 0;
   return text.split(/\s+/).filter(Boolean).length;
 }
-
 
 /**
  * Короткий фрагмент тексту (excerpt)

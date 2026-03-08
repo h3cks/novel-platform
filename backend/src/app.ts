@@ -5,8 +5,10 @@ import authRoutes from './routes/auth.routes';
 import profileRoutes from './routes/profile.routes';
 import novelRoutes from './routes/novel.routes';
 import chapterRoutes from './routes/chapter.routes';
-import reportRoutes from './routes/report.routes';
-import taskRoutes from './routes/task.routes';
+import commentRoutes from './routes/comment.routes';
+import reportsRouter from './routes/report.routes';
+import metaRouter from './routes/meta.routes';
+import { errorHandler } from './middlewares/errorHandler';
 
 const app = express();
 app.use(helmet());
@@ -17,7 +19,9 @@ app.use('/auth', authRoutes);
 app.use('/profile', profileRoutes);
 app.use('/novels', novelRoutes);
 app.use('/', chapterRoutes);
-app.use('/reports', reportRoutes);
-app.use('/moderation/tasks', taskRoutes);
+app.use('/', commentRoutes);
+app.use('/reports', reportsRouter);
+app.use('/api', metaRouter);
+app.use(errorHandler);
 
 export default app;

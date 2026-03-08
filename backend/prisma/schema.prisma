@@ -22,12 +22,11 @@ enum NovelStatus {
   BLOCKED
 }
 
-enum TaskStatus {
+enum ReportStatus {
   OPEN
-  LOCKED
-  AWAITING_AUTHOR
-  AWAITING_REVIEW
-  CLOSED
+  IN_PROGRESS
+  RESOLVED
+  DISMISSED
   ESCALATED
 }
 
@@ -56,6 +55,10 @@ model User {
   processedReports Report[] @relation("ProcessedBy")
 
   notifications Notification[]
+
+  following UserFollow[] @relation("Follower")
+
+  followers UserFollow[] @relation("Author")
 }
 
 model Novel {
@@ -77,6 +80,7 @@ model Novel {
   comments  Comment[]
   ratings   Rating[]
   tags      NovelTag[]
+  genres    NovelGenre[]
   followers Follow[]
   views     ViewHistory[]
 
@@ -86,31 +90,41 @@ model Novel {
 }
 
 model Chapter {
-  id        Int           @id @default(autoincrement())
-  novelId   Int
-  novel     Novel         @relation(fields: [novelId], references: [id])
-  title     String
-  content   String        @db.Text
-  wordCount Int?
-  order     Int
-  createdAt DateTime      @default(now())
-  updatedAt DateTime      @updatedAt
-  comments  Comment[]
-  views     ViewHistory[]
+  id            Int           @id @default(autoincrement())
+  novelId       Int
+  novel         Novel         @relation(fields: [novelId], references: [id])
+  title         String
+  content       String        @db.Text
+  wordCount     Int?
+  order         Int
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  languageRatio Float?
+  comments      Comment[]
+  views         ViewHistory[]
 
   @@unique([novelId, order])
 }
 
 model Comment {
-  id        Int      @id @default(autoincrement())
+  id        Int       @id @default(autoincrement())
   userId    Int
-  user      User     @relation(fields: [userId], references: [id])
+  user      User      @relation(fields: [userId], references: [id])
   novelId   Int?
-  novel     Novel?   @relation(fields: [novelId], references: [id])
+  novel     Novel?    @relation(fields: [novelId], references: [id])
   chapterId Int?
-  chapter   Chapter? @relation(fields: [chapterId], references: [id])
-  text      String   @db.Text
-  createdAt DateTime @default(now())
+  chapter   Chapter?  @relation(fields: [chapterId], references: [id])
+  parentId  Int?
+  parent    Comment?  @relation("CommentReplies", fields: [parentId], references: [id])
+  replies   Comment[] @relation("CommentReplies")
+  text      String    @db.Text
+  deleted   Boolean   @default(false)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@index([novelId])
+  @@index([chapterId])
+  @@index([parentId])
 }
 
 model Rating {
@@ -125,9 +139,16 @@ model Rating {
 }
 
 model Tag {
-  id     Int        @id @default(autoincrement())
-  name   String     @unique
+  id          Int      @id @default(autoincrement())
+  name        String   @unique
+  slug        String?  @unique
+  description String?
+  createdAt   DateTime @default(now())
+
   novels NovelTag[]
+
+  @@index([name])
+  @@index([slug])
 }
 
 model NovelTag {
@@ -139,6 +160,28 @@ model NovelTag {
   @@id([novelId, tagId])
 }
 
+model Genre {
+  id          Int      @id @default(autoincrement())
+  name        String   @unique
+  slug        String?  @unique
+  description String?
+  createdAt   DateTime @default(now())
+
+  novels NovelGenre[]
+
+  @@index([name])
+  @@index([slug])
+}
+
+model NovelGenre {
+  novelId Int
+  genreId Int
+  novel   Novel @relation(fields: [novelId], references: [id])
+  genre   Genre @relation(fields: [genreId], references: [id])
+
+  @@id([novelId, genreId])
+}
+
 model Follow {
   userId    Int
   novelId   Int
@@ -147,6 +190,16 @@ model Follow {
   createdAt DateTime @default(now())
 
   @@id([userId, novelId])
+}
+
+model UserFollow {
+  followerId Int
+  authorId   Int
+  follower   User     @relation("Follower", fields: [followerId], references: [id])
+  author     User     @relation("Author", fields: [authorId], references: [id])
+  createdAt  DateTime @default(now())
+
+  @@id([followerId, authorId])
 }
 
 model ViewHistory {
@@ -161,48 +214,26 @@ model ViewHistory {
 }
 
 model Report {
-  id              Int       @id @default(autoincrement())
-  reporterId      Int
-  reporter        User      @relation(fields: [reporterId], references: [id])
-  targetType      String
-  targetId        Int
-  reason          String
-  detail          String?
-  createdAt       DateTime  @default(now())
-  processed       Boolean   @default(false)
-  processedBy     Int?
-  processedByUser User?     @relation("ProcessedBy", fields: [processedBy], references: [id])
-  processedAt     DateTime?
+  id         Int      @id @default(autoincrement())
+  reporterId Int
+  reporter   User     @relation(fields: [reporterId], references: [id])
+  targetType String
+  targetId   Int
+  reason     String
+  detail     String?
+  createdAt  DateTime @default(now())
+
+  status           ReportStatus @default(OPEN)
+  moderatorId      Int?
+  moderator        User?        @relation("ProcessedBy", fields: [moderatorId], references: [id])
+  moderatorComment String?
+
   actionTaken     String?
   actionTakenNote String?
 
-  taskId Int?
-  task   ModerationTask? @relation("ReportTask", fields: [taskId], references: [id])
-
   @@index([targetType, targetId])
+  @@index([status])
   @@index([reporterId])
-}
-
-model ModerationTask {
-  id                 Int        @id @default(autoincrement())
-  targetType         String
-  targetId           Int
-  createdBy          Int?
-  createdAt          DateTime   @default(now())
-  status             TaskStatus @default(OPEN)
-  lockedBy           Int?
-  lockedAt           DateTime?
-  assignedTo         Int?
-  lastNotifiedAt     DateTime?
-  lastAuthorActionAt DateTime?
-  closedBy           Int?
-  closedAt           DateTime?
-  reportCount        Int        @default(0)
-  note               String?
-
-  reports Report[] @relation("ReportTask")
-
-  @@index([targetType, targetId])
 }
 
 model Notification {

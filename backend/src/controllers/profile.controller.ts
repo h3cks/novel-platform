@@ -1,57 +1,69 @@
 import { Request, Response } from 'express';
 import * as profileService from '../services/profile.service';
 import { isDisplayNameValid, isValidUrl } from '../utils/validators';
+import { ok, fail } from '../utils/response';
+import { asyncHandler } from '../middlewares/asyncHandler';
 
+export const getProfile = asyncHandler(async (req: Request, res: Response) => {
+  const id = Number(req.params.id);
+  if (!Number.isInteger(id) || id <= 0) return fail(res, 400, 'INVALID_ID', 'Invalid id');
 
-export async function getProfile(req: Request, res: Response) {
-  try {
-    const id = Number(req.params.id);
-    if (!Number.isInteger(id) || id <= 0) return res.status(400).json({ error: 'Invalid id' });
+  const user = await profileService.getProfileById(id);
+  if (!user) return fail(res, 404, 'USER_NOT_FOUND', 'User not found');
+  return ok(res, { user });
+});
 
+export const updateProfile = asyncHandler(async (req: Request, res: Response) => {
+  const currentUser = (req as any).user;
+  if (!currentUser) return fail(res, 401, 'UNAUTHORIZED', 'Unauthorized');
 
-    const user = await profileService.getProfileById(id);
-    if (!user) return res.status(404).json({ error: 'User not found' });
-    return res.json({ user });
-  } catch (err: any) {
-    return res.status(500).json({ error: 'Server error' });
+  const { displayName, avatarUrl } = req.body;
+  const updateData: any = {};
+
+  if (displayName !== undefined && displayName !== null) {
+    if (!isDisplayNameValid(displayName)) {
+      return fail(res, 400, 'INVALID_DISPLAY_NAME', 'displayName must be 1-100 chars');
+    }
+    updateData.displayName = displayName.trim();
   }
-}
 
-
-export async function updateProfile(req: Request, res: Response) {
-  try {
-    const currentUser = (req as any).user;
-    if (!currentUser) return res.status(401).json({ error: 'Unauthorized' });
-
-
-    const { displayName, avatarUrl } = req.body;
-    const updateData: any = {};
-
-
-    if (displayName !== undefined && displayName !== null) {
-      if (!isDisplayNameValid(displayName)) {
-        return res.status(400).json({ error: 'displayName must be 1-100 chars' });
-      }
-      updateData.displayName = displayName.trim();
+  if (avatarUrl !== undefined && avatarUrl !== null) {
+    if (!isValidUrl(avatarUrl)) {
+      return fail(res, 400, 'INVALID_AVATAR_URL', 'avatarUrl must be valid URL (http/https)');
     }
-
-
-    if (avatarUrl !== undefined && avatarUrl !== null) {
-      if (!isValidUrl(avatarUrl)) {
-        return res.status(400).json({ error: 'avatarUrl must be valid URL (http/https)' });
-      }
-      updateData.avatarUrl = avatarUrl.trim();
-    }
-
-
-    if (Object.keys(updateData).length === 0) {
-      return res.status(400).json({ error: 'No fields to update' });
-    }
-
-
-    const updated = await profileService.updateProfile(currentUser.id, updateData);
-    return res.json({ user: updated });
-  } catch (err: any) {
-    return res.status(500).json({ error: 'Server error' });
+    updateData.avatarUrl = avatarUrl.trim();
   }
-}
+
+  if (Object.keys(updateData).length === 0) {
+    return fail(res, 400, 'NO_UPDATES', 'No fields to update');
+  }
+
+  const updated = await profileService.updateProfile(currentUser.id, updateData);
+  return ok(res, { user: updated });
+});
+
+export const deleteProfile = asyncHandler(async (req: Request, res: Response) => {
+  const currentUser = (req as any).user;
+  if (!currentUser) return fail(res, 401, 'UNAUTHORIZED', 'Unauthorized');
+
+  const paramId = req.params.id ? Number(req.params.id) : currentUser.id;
+  if (!Number.isInteger(paramId) || paramId <= 0) return fail(res, 400, 'INVALID_ID', 'Invalid id');
+
+  try {
+    const result = await profileService.deleteProfileAndAllData(
+      { id: currentUser.id, role: currentUser.role },
+      paramId,
+    );
+
+    if (!result.success) {
+      if (result.error === 'User not found')
+        return fail(res, 404, 'USER_NOT_FOUND', 'User not found');
+      return fail(res, 500, 'DELETE_FAILED', result.error);
+    }
+
+    return ok(res, { success: true, message: 'Account and all related data deleted' });
+  } catch (err: any) {
+    if (err?.code === 'FORBIDDEN') return fail(res, 403, 'FORBIDDEN', 'Forbidden');
+    throw err;
+  }
+});

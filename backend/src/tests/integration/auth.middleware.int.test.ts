@@ -129,7 +129,9 @@ describe('authOptional middleware (integration)', () => {
   });
 
   test('invalid token => next() and user===null', async () => {
-    const res = await request(app).get('/optional').set('Authorization', 'Bearer invalid.token.here');
+    const res = await request(app)
+      .get('/optional')
+      .set('Authorization', 'Bearer invalid.token.here');
     expect(res.status).toBe(200);
     expect(res.body).toEqual({ user: null });
   });
