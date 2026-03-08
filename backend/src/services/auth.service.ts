@@ -3,7 +3,6 @@ import bcrypt from 'bcrypt';
 import { sign } from 'jsonwebtoken';
 import type { Secret, SignOptions } from 'jsonwebtoken';
 
-
 import {
   BCRYPT_SALT_ROUNDS,
   JWT_EXPIRES_IN,
@@ -37,17 +36,16 @@ function safeUser(user: any): SafeUser {
   };
 }
 
-
 export async function registerUser({
-                                     username,
-                                     email,
-                                     password,
-                                   }: {
+  username,
+  email,
+  password,
+}: {
   username?: string | null;
   email?: string | null;
   password: string;
 }) {
-// uniqueness checks
+  // uniqueness checks
   if (email) {
     const exists = await prisma.user.findUnique({ where: { email } });
     if (exists) {
@@ -65,25 +63,22 @@ export async function registerUser({
     }
   }
 
-
   const hashed = await bcrypt.hash(password, Number(BCRYPT_SALT_ROUNDS));
   const user = await prisma.user.create({
     data: {
       username,
       email,
       password: hashed,
-// if email is absent, consider account confirmed by design
+      // if email is absent, consider account confirmed by design
       emailConfirmed: email ? false : true,
     },
   });
 
-
-// generate confirm token (plain for email, hashed for DB)
+  // generate confirm token (plain for email, hashed for DB)
   if (email) {
     const token = generateToken(32);
     const hashedToken = hashToken(token);
     const expires = new Date(Date.now() + EMAIL_CONFIRM_TOKEN_TTL_HOURS * 60 * 60 * 1000);
-
 
     await prisma.user.update({
       where: { id: user.id },
@@ -93,17 +88,33 @@ export async function registerUser({
       },
     });
 
-
-    await sendConfirmationEmail(email, token);
+    try {
+      // якщо send падає — ми видалимо створеного користувача щоб не лишати "порожніх" записів
+      const { previewUrl } = await sendConfirmationEmail(email, token);
+      // optional: повертати previewUrl для локального тестування
+      return safeUser(user);
+    } catch (err: any) {
+      console.error('Failed to send confirmation email, rolling back user creation:', err);
+      // видаляємо користувача (бо підтвердження не надіслалось)
+      try {
+        await prisma.user.delete({ where: { id: user.id } });
+      } catch (delErr: any) {
+        console.error('Failed to delete user after email send failure:', delErr);
+      }
+      const e: any = new Error('Failed to send confirmation email');
+      e.code = 'EMAIL_SEND_FAILED';
+      throw e;
+    }
   }
-
 
   return safeUser(user);
 }
 
 export async function confirmEmail(token: string) {
   const hashed = hashToken(token);
-  const user = await prisma.user.findFirst({ where: { emailConfirmToken: hashed, emailConfirmed: false } });
+  const user = await prisma.user.findFirst({
+    where: { emailConfirmToken: hashed, emailConfirmed: false },
+  });
   if (!user) {
     const err: any = new Error('Invalid token');
     err.code = 'INVALID_TOKEN';
@@ -115,7 +126,6 @@ export async function confirmEmail(token: string) {
     throw err;
   }
 
-
   const updatedUser = await prisma.user.update({
     where: { id: user.id },
     data: {
@@ -125,14 +135,13 @@ export async function confirmEmail(token: string) {
     },
   });
 
-
   return safeUser(updatedUser);
 }
 
 export async function resendConfirmation(email: string) {
   const user = await prisma.user.findUnique({ where: { email } });
   if (!user) {
-// don't reveal
+    // don't reveal
     return;
   }
   if (user.emailConfirmed) {
@@ -142,7 +151,6 @@ export async function resendConfirmation(email: string) {
   const hashedToken = hashToken(token);
   const expires = new Date(Date.now() + EMAIL_CONFIRM_TOKEN_TTL_HOURS * 60 * 60 * 1000);
 
-
   await prisma.user.update({
     where: { id: user.id },
     data: {
@@ -150,7 +158,6 @@ export async function resendConfirmation(email: string) {
       emailConfirmExpires: expires,
     },
   });
-
 
   await sendConfirmationEmail(email, token);
 }
@@ -160,21 +167,11 @@ export async function login(identifier: string, password: string) {
     (await prisma.user.findUnique({ where: { email: identifier } })) ??
     (await prisma.user.findUnique({ where: { username: identifier } }));
 
-
   if (!user) {
     const err: any = new Error('Invalid credentials');
     err.code = 'INVALID_CREDENTIALS';
     throw err;
   }
-
-
-// prevent login for users with email that is not confirmed
-  if (user.email && !user.emailConfirmed) {
-    const err: any = new Error('Email not confirmed');
-    err.code = 'EMAIL_NOT_CONFIRMED';
-    throw err;
-  }
-
 
   const ok = await bcrypt.compare(password, user.password);
   if (!ok) {
@@ -183,24 +180,20 @@ export async function login(identifier: string, password: string) {
     throw err;
   }
 
-
   const token = sign(
-    { sub: user.id, role: user.role },
+    { userId: user.id, sub: String(user.id), role: user.role },
     JWT_SECRET as Secret,
-    { expiresIn: JWT_EXPIRES_IN as SignOptions['expiresIn'] }
+    { expiresIn: JWT_EXPIRES_IN as SignOptions['expiresIn'] },
   );
-
 
   return { token, user: safeUser(user) };
 }
-
 
 export async function getUserById(id: number) {
   const user = await prisma.user.findUnique({ where: { id } });
   if (!user) return null;
   return safeUser(user);
 }
-
 
 export async function changePassword(userId: number, currentPassword: string, newPassword: string) {
   const user = await prisma.user.findUnique({ where: { id: userId } });
@@ -229,7 +222,6 @@ export async function requestPasswordReset(email: string) {
   const hashedToken = hashToken(token);
   const expires = new Date(Date.now() + PASSWORD_RESET_TOKEN_TTL_HOURS * 60 * 60 * 1000);
 
-
   await prisma.user.update({
     where: { id: user.id },
     data: {
@@ -237,7 +229,6 @@ export async function requestPasswordReset(email: string) {
       passwordResetExpires: expires,
     },
   });
-
 
   await sendPasswordResetEmail(email, token);
 }
@@ -256,7 +247,6 @@ export async function resetPassword(token: string, newPassword: string) {
     throw err;
   }
 
-
   const hashedPassword = await bcrypt.hash(newPassword, Number(BCRYPT_SALT_ROUNDS));
   await prisma.user.update({
     where: { id: user.id },
@@ -266,7 +256,6 @@ export async function resetPassword(token: string, newPassword: string) {
       passwordResetExpires: null,
     },
   });
-
 
   return true;
 }

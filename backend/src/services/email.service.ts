@@ -5,20 +5,26 @@ let transporterPromise: Promise<nodemailer.Transporter> | null = null;
 
 async function createTransporter(): Promise<nodemailer.Transporter> {
   if (NODE_ENV === 'production' && SMTP_HOST) {
-    return nodemailer.createTransport({
+    const transporter = nodemailer.createTransport({
       host: SMTP_HOST,
-      port: SMTP_PORT,
-      secure: SMTP_PORT === 465,
+      port: Number(SMTP_PORT),
+      secure: Number(SMTP_PORT) === 465,
       auth: {
         user: SMTP_USER,
         pass: SMTP_PASS,
       },
     });
+    try {
+      await transporter.verify();
+    } catch (err) {
+      throw err;
+    }
+    return transporter;
   }
 
-  // Dev/test: use ethereal
   const testAccount = await nodemailer.createTestAccount();
-  return nodemailer.createTransport({
+
+  const transporter = nodemailer.createTransport({
     host: testAccount.smtp.host,
     port: testAccount.smtp.port,
     secure: testAccount.smtp.secure,
@@ -27,6 +33,25 @@ async function createTransporter(): Promise<nodemailer.Transporter> {
       pass: testAccount.pass,
     },
   });
+  try {
+    await transporter.verify();
+  } catch (err) {}
+  return transporter;
+}
+
+export async function sendMail(to: string, subject: string, html: string) {
+  if (!EMAIL_FROM) {
+    throw new Error('EMAIL_FROM is not configured');
+  }
+  const transporter = await getTransporter();
+  try {
+    const info = await transporter.sendMail({ from: EMAIL_FROM, to, subject, html });
+    const preview = nodemailer.getTestMessageUrl(info);
+    console.log('sendMail: messageId=', info.messageId, 'previewUrl=', preview);
+    return { info, previewUrl: preview ?? null };
+  } catch (err) {
+    throw err;
+  }
 }
 
 async function getTransporter() {
@@ -34,24 +59,6 @@ async function getTransporter() {
     transporterPromise = createTransporter();
   }
   return transporterPromise;
-}
-
-export async function sendMail(to: string, subject: string, html: string) {
-  const transporter = await getTransporter();
-  const info = await transporter.sendMail({
-    from: EMAIL_FROM,
-    to,
-    subject,
-    html,
-  });
-
-  // In dev, ethereal provides preview URL
-  const preview = nodemailer.getTestMessageUrl(info);
-  if (preview) {
-    console.log('Preview URL: %s', preview);
-  }
-  console.log(`Mail sent: ${info.messageId} to ${to}`);
-  return info;
 }
 
 export async function sendConfirmationEmail(to: string, token: string) {
@@ -64,13 +71,13 @@ export async function sendConfirmationEmail(to: string, token: string) {
     <p><a href="${confirmUrl}">${confirmUrl}</a></p>
     <p>Якщо ви не реєструвалися — проігноруйте цей лист.</p>
   `;
+
   return sendMail(to, 'Підтвердження email — Novel Platform', html);
 }
 
 export async function sendPasswordResetEmail(to: string, token: string) {
-  // For frontend flow, send FRONTEND_URL link with token param
   const frontend = process.env.FRONTEND_URL ?? 'http://localhost:3000';
-  const resetUrl = `${frontend}/reset-password?token=${token}`;
+  const resetUrl = `${frontend}/reset-password?token=${encodeURIComponent(token)}`;
   const html = `
     <p>Ви запросили скидання пароля.</p>
     <p>Перейдіть за посиланням, щоб задати новий пароль (лінк дійсний обмежений час):</p>

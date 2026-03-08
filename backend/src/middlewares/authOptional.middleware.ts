@@ -14,11 +14,9 @@ export async function authOptional(req: Request, _res: Response, next: NextFunct
 
     const token = parts[1];
     try {
-      // Уточнити алгоритми явно — безпечна практика
       const payload: any = verify(token, JWT_SECRET as Secret, { algorithms: ['HS256'] });
-
-      // payload.sub може бути рядком або числом
-      const subId = Number(payload?.sub);
+      const uid = payload.userId ?? payload.sub;
+      const subId = Number(uid);
       if (!Number.isInteger(subId) || subId <= 0) return next();
 
       const user = await prisma.user.findUnique({ where: { id: subId } });

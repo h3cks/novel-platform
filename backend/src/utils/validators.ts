@@ -11,10 +11,12 @@ export function isPasswordValid(v: unknown): v is string {
   const s = v.trim();
   if (s.length < 8) return false;
 
-  return /[A-Z]/.test(s) &&
+  return (
+    /[A-Z]/.test(s) &&
     /[a-z]/.test(s) &&
     /[0-9]/.test(s) &&
-    /[!@#$%^&*(),.?":{}|<>~`_\-+=\[\];']/.test(s);
+    /[!@#$%^&*(),.?":{}|<>~`_\-+=\[\];']/.test(s)
+  );
 }
 
 export function isUsernameValid(v: unknown): v is string {

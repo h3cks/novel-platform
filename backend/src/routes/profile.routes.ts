@@ -10,4 +10,7 @@ router.get('/:id', profileCtrl.getProfile);
 // Protected: оновлення власного профілю
 router.patch('/', authMiddleware, profileCtrl.updateProfile);
 
+// Видалення акаунта з усіма даними
+router.delete('/', authMiddleware, profileCtrl.deleteProfile);
+router.delete('/:id', authMiddleware, profileCtrl.deleteProfile);
 export default router;

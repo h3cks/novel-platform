@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
-import jwt, { Secret, TokenExpiredError  } from 'jsonwebtoken';
+import jwt, { Secret, TokenExpiredError } from 'jsonwebtoken';
 import { JWT_SECRET } from '../config';
 import prisma from '../prisma/client';
 
@@ -9,9 +9,9 @@ import prisma from '../prisma/client';
 export async function authMiddleware(req: Request, res: Response, next: NextFunction) {
   try {
     const header = req.headers['authorization'];
-
-    const parts = String(header).split(' ');
-    if (parts.length !== 2 || parts[0] !== 'Bearer') {
+    if (!header) return res.status(401).json({ error: 'Missing Authorization header' });
+    const parts = String(header).split(' ').filter(Boolean);
+    if (parts.length !== 2 || parts[0].toLowerCase() !== 'bearer') {
       return res.status(401).json({ error: 'Invalid Authorization header format' });
     }
 
@@ -19,9 +19,16 @@ export async function authMiddleware(req: Request, res: Response, next: NextFunc
     if (!token) return res.status(401).json({ error: 'Missing token' });
 
     const payload: any = jwt.verify(token, JWT_SECRET as Secret, { algorithms: ['HS256'] });
-    if (!payload?.sub) return res.status(401).json({ error: 'Invalid token payload' });
 
-    const user = await prisma.user.findUnique({ where: { id: Number(payload.sub) } });
+    // приймаємо як userId, так і sub
+    const uid = payload.userId ?? payload.sub;
+    if (!uid) return res.status(401).json({ error: 'Invalid token payload' });
+
+    // завжди використовуємо uid числом
+    const userId = Number(uid);
+    if (Number.isNaN(userId)) return res.status(401).json({ error: 'Invalid token subject' });
+
+    const user = await prisma.user.findUnique({ where: { id: userId } });
     if (!user) return res.status(401).json({ error: 'User not found' });
 
     if (user.email && user.emailConfirmed === false) {
