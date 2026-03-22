@@ -1,6 +1,3 @@
-import dotenv from 'dotenv';
-dotenv.config();
-
 function toNumber(v: string | undefined, fallback: number) {
   const n = Number(v);
   return Number.isFinite(n) ? n : fallback;
