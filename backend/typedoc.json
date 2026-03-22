@@ -1,0 +1,9 @@
+{
+  "$schema": "https://typedoc.org/schema.json",
+  "entryPoints": ["src/index.ts", "src/services", "src/controllers"],
+  "out": "docs/generated-html",
+  "name": "Novel Platform API Documentation",
+  "excludePrivate": true,
+  "excludeProtected": true,
+  "theme": "default"
+}

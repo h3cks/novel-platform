@@ -15,13 +15,19 @@ app.use(helmet());
 app.use(cors());
 app.use(express.json({ limit: '2mb' }));
 
-app.use('/auth', authRoutes);
-app.use('/profile', profileRoutes);
-app.use('/novels', novelRoutes);
-app.use('/', chapterRoutes);
-app.use('/', commentRoutes);
-app.use('/reports', reportsRouter);
-app.use('/api', metaRouter);
+
+const apiRouter = express.Router();
+
+apiRouter.use('/auth', authRoutes);
+apiRouter.use('/profile', profileRoutes);
+apiRouter.use('/novels', novelRoutes);
+apiRouter.use('/chapters', chapterRoutes);
+apiRouter.use('/comments', commentRoutes);
+apiRouter.use('/reports', reportsRouter);
+apiRouter.use('/meta', metaRouter);
+
+app.use('/api/v1', apiRouter);
+
 app.use(errorHandler);
 
 export default app;

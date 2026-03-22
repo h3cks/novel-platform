@@ -211,8 +211,12 @@ model ViewHistory {
   chapterId Int?
   chapter   Chapter? @relation(fields: [chapterId], references: [id])
   viewedAt  DateTime @default(now())
-}
 
+
+  @@index([novelId])
+  @@index([chapterId])
+  @@index([userId])
+}
 model Report {
   id         Int      @id @default(autoincrement())
   reporterId Int
