@@ -1,4 +1,4 @@
-// backend/src/services/profile.service.ts
+// backend/src/services/reports.service.ts
 import prisma from '../prisma/client';
 
 export async function getProfileById(id: number) {

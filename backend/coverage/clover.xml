@@ -372,7 +372,7 @@
         <line num="78" count="0" type="stmt"/>
         <line num="86" count="0" type="stmt"/>
       </file>
-      <file name="profile.service.ts" path="C:\Users\12\Desktop\4 курс\КРБ\novel-platform\backend\src\services\profile.service.ts">
+      <file name="reports.service.ts" path="C:\Users\12\Desktop\4 курс\КРБ\novel-platform\backend\src\services\reports.service.ts">
         <metrics statements="63" coveredstatements="35" conditionals="39" coveredconditionals="15" methods="6" coveredmethods="1"/>
         <line num="2" count="1" type="stmt"/>
         <line num="4" count="1" type="stmt"/>
