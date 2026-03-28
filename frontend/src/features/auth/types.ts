@@ -1,15 +1,10 @@
-// src/features/auth/types.ts
-
 export interface User {
   id: number;
   email: string;
   username: string | null;
   role: string;
-
-  // Додаємо відсутні поля з бекенду:
   displayName?: string | null;
   avatarUrl?: string | null;
-  createdAt?: string;
 }
 
 export interface AuthResponse {
@@ -21,5 +16,11 @@ export interface AuthResponse {
 
 export interface LoginDTO {
   email: string;
+  password: string;
+}
+
+export interface RegisterDTO {
+  email: string;
+  username: string;
   password: string;
 }
