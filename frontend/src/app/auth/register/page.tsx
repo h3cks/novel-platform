@@ -1,72 +1,119 @@
 'use client';
 
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { useMutation } from '@tanstack/react-query';
 import { authService } from '@/features/auth/api/auth.service';
-import { useAuthStore } from '@/features/auth/store/useAuthStore';
-import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { AuthResponse } from '@/features/auth/types';
-
-const registerSchema = z.object({
-  email: z.string().email('Невірний формат email'),
-  username: z.string().min(3, 'Мінімум 3 символи'),
-  password: z.string().min(6, 'Мінімум 6 символів'),
-});
-
-type RegisterFormValues = z.infer<typeof registerSchema>;
 
 export default function RegisterPage() {
   const router = useRouter();
-  const setAuth = useAuthStore((state) => state.setAuth);
 
-  const { register, handleSubmit, formState: { errors } } = useForm<RegisterFormValues>({
-    resolver: zodResolver(registerSchema),
-  });
+  const [username, setUsername] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [errorMsg, setErrorMsg] = useState('');
 
-  const registerMutation = useMutation<AuthResponse, Error, RegisterFormValues>({
+  const registerMutation = useMutation({
     mutationFn: authService.register,
-    onSuccess: (response) => {
-      setAuth(response.data.user, response.data.accessToken);
-      router.push('/profile');
+    onSuccess: () => {
+      // Після успішної реєстрації відправляємо на логін
+      router.push('/auth/login?registered=true');
     },
+    onError: (error: any) => {
+      setErrorMsg(error.response?.data?.message || 'Помилка реєстрації. Перевірте введені дані.');
+    }
   });
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setErrorMsg('');
+    registerMutation.mutate({ username, email, password });
+  };
 
   return (
-    <div className="max-w-md mx-auto mt-20 bg-white p-8 border rounded-xl shadow-sm">
-      <h1 className="text-2xl font-bold text-center mb-6">Реєстрація</h1>
-
-      <form onSubmit={handleSubmit((data) => registerMutation.mutate(data))} className="space-y-4">
+    <div className="flex min-h-screen items-center justify-center bg-slate-50 px-4 sm:px-6 lg:px-8">
+      <div className="w-full max-w-md space-y-8 rounded-2xl bg-white p-8 shadow-xl">
         <div>
-          <label className="block text-sm font-medium text-gray-700">Email</label>
-          <input {...register('email')} className="mt-1 w-full border p-2 rounded-md outline-none focus:ring-2 focus:ring-blue-500" placeholder="you@example.com" />
-          {errors.email && <p className="text-red-500 text-xs mt-1">{errors.email.message}</p>}
+          <h2 className="mt-6 text-center text-3xl font-bold tracking-tight text-slate-900">
+            Створити акаунт
+          </h2>
+          <p className="mt-2 text-center text-sm text-slate-600">
+            Приєднуйтесь до спільноти NovelHub
+          </p>
         </div>
+        <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
+          {errorMsg && (
+            <div className="rounded-md bg-red-50 p-4 text-sm text-red-700 border border-red-200">
+              {errorMsg}
+            </div>
+          )}
+          <div className="space-y-4 rounded-md shadow-sm">
+            <div>
+              <label htmlFor="username" className="block text-sm font-medium text-slate-700 mb-1">
+                Ім'я користувача
+              </label>
+              <input
+                id="username"
+                name="username"
+                type="text"
+                required
+                className="relative block w-full rounded-lg border-0 py-2.5 text-slate-900 ring-1 ring-inset ring-slate-300 placeholder:text-slate-400 focus:z-10 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6 px-3"
+                placeholder="johndoe"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+              />
+            </div>
+            <div>
+              <label htmlFor="email" className="block text-sm font-medium text-slate-700 mb-1">
+                Електронна пошта
+              </label>
+              <input
+                id="email"
+                name="email"
+                type="email"
+                required
+                className="relative block w-full rounded-lg border-0 py-2.5 text-slate-900 ring-1 ring-inset ring-slate-300 placeholder:text-slate-400 focus:z-10 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6 px-3"
+                placeholder="yours@example.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+              />
+            </div>
+            <div>
+              <label htmlFor="password" className="block text-sm font-medium text-slate-700 mb-1">
+                Пароль (мінімум 6 символів)
+              </label>
+              <input
+                id="password"
+                name="password"
+                type="password"
+                required
+                minLength={6}
+                className="relative block w-full rounded-lg border-0 py-2.5 text-slate-900 ring-1 ring-inset ring-slate-300 placeholder:text-slate-400 focus:z-10 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6 px-3"
+                placeholder="••••••••"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+              />
+            </div>
+          </div>
 
-        <div>
-          <label className="block text-sm font-medium text-gray-700">Нікнейм</label>
-          <input {...register('username')} className="mt-1 w-full border p-2 rounded-md outline-none focus:ring-2 focus:ring-blue-500" placeholder="User123" />
-          {errors.username && <p className="text-red-500 text-xs mt-1">{errors.username.message}</p>}
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-700">Пароль</label>
-          <input type="password" {...register('password')} className="mt-1 w-full border p-2 rounded-md outline-none focus:ring-2 focus:ring-blue-500" />
-          {errors.password && <p className="text-red-500 text-xs mt-1">{errors.password.message}</p>}
-        </div>
-
-        {registerMutation.isError && <div className="text-red-600 text-sm p-2 bg-red-50 rounded">Помилка реєстрації. Перевірте дані.</div>}
-
-        <button type="submit" disabled={registerMutation.isPending} className="w-full bg-blue-600 text-white py-2 rounded-md hover:bg-blue-700 disabled:opacity-50">
-          {registerMutation.isPending ? 'Завантаження...' : 'Створити акаунт'}
-        </button>
-      </form>
-
-      <p className="mt-4 text-center text-sm text-gray-600">
-        Вже є акаунт? <Link href="/login" className="text-blue-600 hover:underline">Увійти</Link>
-      </p>
+          <div>
+            <button
+              type="submit"
+              disabled={registerMutation.isPending}
+              className="flex w-full justify-center rounded-lg bg-indigo-600 px-3 py-2.5 text-sm font-semibold leading-6 text-white transition-colors hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {registerMutation.isPending ? 'Створення акаунта...' : 'Зареєструватися'}
+            </button>
+          </div>
+        </form>
+        <p className="mt-10 text-center text-sm text-slate-500">
+          Вже маєте акаунт?{' '}
+          <Link href="/auth/login" className="font-semibold leading-6 text-indigo-600 hover:text-indigo-500 transition-colors">
+            Увійти
+          </Link>
+        </p>
+      </div>
     </div>
   );
 }

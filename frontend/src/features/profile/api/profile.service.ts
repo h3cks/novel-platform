@@ -1,13 +1,17 @@
 import { apiClient } from '@/lib/axios';
 import { User } from '@/features/auth/types';
+import { UpdateProfileDTO } from '../types';
 
 export const profileService = {
-  getProfile: async () => {
-    const { data } = await apiClient.get<{ data: User }>('/profile');
-    return data.data;
+  // Получение профиля по имени пользователя (публичный доступ)
+  getProfile: async (username: string): Promise<User> => {
+    const { data } = await apiClient.get<User>(`/profile/${username}`);
+    return data;
   },
-  updateProfile: async (payload: Partial<User>) => {
-    const { data } = await apiClient.patch<{ data: User }>('/profile', payload);
-    return data.data;
+
+  // Обновление профиля текущего пользователя
+  updateProfile: async (payload: UpdateProfileDTO): Promise<User> => {
+    const { data } = await apiClient.patch<User>('/profile', payload);
+    return data;
   }
 };

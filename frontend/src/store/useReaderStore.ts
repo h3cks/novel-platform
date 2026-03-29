@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
-type Theme = 'light' | 'dark' | 'sepia';
+type Theme = 'light' | 'sepia' | 'dark';
 
 interface ReaderState {
   fontSize: number;
@@ -13,11 +13,13 @@ interface ReaderState {
 export const useReaderStore = create<ReaderState>()(
   persist(
     (set) => ({
-      fontSize: 18, // Розмір тексту за замовчуванням
+      fontSize: 18, // Базовий розмір у пікселях
       theme: 'light',
-      setFontSize: (size) => set({ fontSize: Math.max(12, Math.min(size, 32)) }), // Обмеження від 12 до 32px
+      setFontSize: (size) => set({ fontSize: size }),
       setTheme: (theme) => set({ theme }),
     }),
-    { name: 'reader-settings' }
+    {
+      name: 'novelhub-reader-settings',
+    }
   )
 );

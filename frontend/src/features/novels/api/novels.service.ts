@@ -1,17 +1,39 @@
 import { apiClient } from '@/lib/axios';
-import { Novel, NovelFilters } from '../types';
+import { Novel, CreateNovelDTO, UpdateNovelDTO } from '../types';
 
 export const novelsService = {
-  getNovels: async (params: NovelFilters) => {
-    const { data } = await apiClient.get<{ data: Novel[], total: number }>('/novels', { params });
-    return data; // Враховуючи утиліту response.ts на бекенді
+  // Получить список всех доступных новелл
+  getNovels: async (): Promise<Novel[]> => {
+    const { data } = await apiClient.get<Novel[]>('/novels');
+    return data;
   },
-  getNovelById: async (id: number) => {
-    const { data } = await apiClient.get<{ data: Novel }>(`/novels/${id}`);
-    return data.data;
+
+  // Получить детальную информацию о новелле
+  getNovelById: async (id: number | string): Promise<Novel> => {
+    const { data } = await apiClient.get<Novel>(`/novels/${id}`);
+    return data;
   },
-  createNovel: async (payload: Partial<Novel>) => {
-    const { data } = await apiClient.post<{ data: Novel }>('/novels', payload);
-    return data.data;
+
+  // Создать новую новеллу (требуется авторизация)
+  createNovel: async (payload: CreateNovelDTO): Promise<Novel> => {
+    const { data } = await apiClient.post<Novel>('/novels', payload);
+    return data;
+  },
+
+  // Обновить новеллу
+  updateNovel: async (id: number | string, payload: UpdateNovelDTO): Promise<Novel> => {
+    const { data } = await apiClient.patch<Novel>(`/novels/${id}`, payload);
+    return data;
+  },
+
+  // Опубликовать новеллу
+  publishNovel: async (id: number | string): Promise<Novel> => {
+    const { data } = await apiClient.post<Novel>(`/novels/${id}/publish`);
+    return data;
+  },
+
+  // Удалить новеллу
+  deleteNovel: async (id: number | string): Promise<void> => {
+    await apiClient.delete(`/novels/${id}`);
   }
 };
