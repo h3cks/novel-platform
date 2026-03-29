@@ -1,26 +1,28 @@
+export type UserRole = 'READER' | 'AUTHOR' | 'MODERATOR' | 'ADMIN';
+
 export interface User {
   id: number;
   email: string;
-  username: string | null;
-  role: string;
-  displayName?: string | null;
-  avatarUrl?: string | null;
+  username: string;
+  displayName: string | null;
+  avatarUrl: string | null;
+  role: UserRole;
+  emailConfirmed: boolean;
+  createdAt: string;
 }
 
 export interface AuthResponse {
-  data: {
-    user: User;
-    accessToken: string;
-  };
+  user: User;
+  token: string;
 }
 
-export interface LoginDTO {
+export interface LoginCredentials {
   email: string;
   password: string;
 }
 
-export interface RegisterDTO {
-  email: string;
+export interface RegisterCredentials {
   username: string;
+  email: string;
   password: string;
 }

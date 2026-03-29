@@ -1,90 +1,101 @@
 'use client';
 
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { useMutation } from '@tanstack/react-query';
 import { authService } from '@/features/auth/api/auth.service';
 import { useAuthStore } from '@/features/auth/store/useAuthStore';
-import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-// ДОДАНО ІМПОРТ ТИПУ:
-import { AuthResponse } from '@/features/auth/types';
-
-const loginSchema = z.object({
-  email: z.string().email('Невірний формат email'),
-  password: z.string().min(6, 'Мінімум 6 символів'),
-});
-
-type LoginFormValues = z.infer<typeof loginSchema>;
 
 export default function LoginPage() {
   const router = useRouter();
-
-  // Додано явну типізацію стану, хоча Zustand мав би її підхопити автоматично
   const setAuth = useAuthStore((state) => state.setAuth);
 
-  const { register, handleSubmit, formState: { errors } } = useForm<LoginFormValues>({
-    resolver: zodResolver(loginSchema),
-  });
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [errorMsg, setErrorMsg] = useState('');
 
-  // ВИПРАВЛЕНО: Явна типізація useMutation <ДаніВідповіді, Помилка, ВхідніДані>
-  const loginMutation = useMutation<AuthResponse, Error, LoginFormValues>({
+  const loginMutation = useMutation({
     mutationFn: authService.login,
-    onSuccess: (response) => {
-      // Тепер TypeScript знає, що 'response' це AuthResponse
-      setAuth(response.data.user, response.data.accessToken);
-      router.push('/profile');
+    onSuccess: (data) => {
+      setAuth(data.user, data.token);
+      router.push('/'); // Перенаправляємо на головну після успішного входу
     },
+    onError: (error: any) => {
+      setErrorMsg(error.response?.data?.message || 'Помилка входу. Перевірте email та пароль.');
+    }
   });
 
-  const onSubmit = (data: LoginFormValues) => {
-    loginMutation.mutate(data);
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setErrorMsg('');
+    loginMutation.mutate({ email, password });
   };
 
   return (
-    <div className="max-w-md mx-auto mt-20 bg-white p-8 border rounded-xl shadow-sm">
-      <h1 className="text-2xl font-bold text-center mb-6">Вхід у NovelHub</h1>
-
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+    <div className="flex min-h-screen items-center justify-center bg-slate-50 px-4 sm:px-6 lg:px-8">
+      <div className="w-full max-w-md space-y-8 rounded-2xl bg-white p-8 shadow-xl">
         <div>
-          <label className="block text-sm font-medium text-gray-700">Email</label>
-          <input
-            {...register('email')}
-            className="mt-1 block w-full rounded-md border-gray-300 border p-2 focus:border-blue-500 focus:ring-blue-500"
-            placeholder="you@example.com"
-          />
-          {errors.email && <p className="text-red-500 text-xs mt-1">{errors.email.message}</p>}
+          <h2 className="mt-6 text-center text-3xl font-bold tracking-tight text-slate-900">
+            Вхід до NovelHub
+          </h2>
         </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-700">Пароль</label>
-          <input
-            type="password"
-            {...register('password')}
-            className="mt-1 block w-full rounded-md border-gray-300 border p-2 focus:border-blue-500 focus:ring-blue-500"
-          />
-          {errors.password && <p className="text-red-500 text-xs mt-1">{errors.password.message}</p>}
-        </div>
-
-        {loginMutation.isError && (
-          <div className="text-red-600 text-sm p-2 bg-red-50 rounded">
-            Невірний email або пароль
+        <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
+          {errorMsg && (
+            <div className="rounded-md bg-red-50 p-4 text-sm text-red-700 border border-red-200">
+              {errorMsg}
+            </div>
+          )}
+          <div className="space-y-4 rounded-md shadow-sm">
+            <div>
+              <label htmlFor="email" className="block text-sm font-medium text-slate-700 mb-1">
+                Електронна пошта
+              </label>
+              <input
+                id="email"
+                name="email"
+                type="email"
+                required
+                className="relative block w-full rounded-lg border-0 py-2.5 text-slate-900 ring-1 ring-inset ring-slate-300 placeholder:text-slate-400 focus:z-10 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6 px-3"
+                placeholder="yours@example.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+              />
+            </div>
+            <div>
+              <label htmlFor="password" className="block text-sm font-medium text-slate-700 mb-1">
+                Пароль
+              </label>
+              <input
+                id="password"
+                name="password"
+                type="password"
+                required
+                className="relative block w-full rounded-lg border-0 py-2.5 text-slate-900 ring-1 ring-inset ring-slate-300 placeholder:text-slate-400 focus:z-10 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6 px-3"
+                placeholder="••••••••"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+              />
+            </div>
           </div>
-        )}
 
-        <button
-          type="submit"
-          disabled={loginMutation.isPending}
-          className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 disabled:opacity-50 transition"
-        >
-          {loginMutation.isPending ? 'Завантаження...' : 'Увійти'}
-        </button>
-      </form>
-
-      <p className="mt-4 text-center text-sm text-gray-600">
-        Ще немає акаунта? <Link href="/register" className="text-blue-600 hover:underline">Зареєструватися</Link>
-      </p>
+          <div>
+            <button
+              type="submit"
+              disabled={loginMutation.isPending}
+              className="flex w-full justify-center rounded-lg bg-indigo-600 px-3 py-2.5 text-sm font-semibold leading-6 text-white transition-colors hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {loginMutation.isPending ? 'Виконується вхід...' : 'Увійти'}
+            </button>
+          </div>
+        </form>
+        <p className="mt-10 text-center text-sm text-slate-500">
+          Ще не маєте акаунта?{' '}
+          <Link href="/auth/register" className="font-semibold leading-6 text-indigo-600 hover:text-indigo-500 transition-colors">
+            Зареєструватися
+          </Link>
+        </p>
+      </div>
     </div>
   );
 }

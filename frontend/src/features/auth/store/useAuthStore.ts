@@ -4,23 +4,23 @@ import { User } from '../types';
 
 interface AuthState {
   user: User | null;
-  accessToken: string | null;
-  isAuthenticated: boolean;
+  token: string | null;
   setAuth: (user: User, token: string) => void;
-  setTokens: (token: string) => void;
   logout: () => void;
+  isAuthenticated: () => boolean;
 }
 
 export const useAuthStore = create<AuthState>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       user: null,
-      accessToken: null,
-      isAuthenticated: false,
-      setAuth: (user, accessToken) => set({ user, accessToken, isAuthenticated: true }),
-      setTokens: (accessToken) => set({ accessToken }),
-      logout: () => set({ user: null, accessToken: null, isAuthenticated: false }),
+      token: null,
+      setAuth: (user, token) => set({ user, token }),
+      logout: () => set({ user: null, token: null }),
+      isAuthenticated: () => !!get().token,
     }),
-    { name: 'auth-storage' }
+    {
+      name: 'novelhub-auth', // Ім'я ключа в localStorage
+    }
   )
 );
