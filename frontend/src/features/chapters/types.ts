@@ -2,10 +2,9 @@ export interface Chapter {
   id: number;
   novelId: number;
   title: string;
-  content: string;
-  wordCount: number | null;
+  content: string; // HTML контент від TipTap редактора
   order: number;
-  languageRatio: number | null;
+  wordCount: number | null;
   createdAt: string;
   updatedAt: string;
 }

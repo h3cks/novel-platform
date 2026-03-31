@@ -1,17 +1,17 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { novelsService } from '../api/novels.service';
-import { NovelFilters } from '../types';
+import { Novel } from '../types';
 
-export const useNovels = (filters: NovelFilters) => {
+export const useNovels = () => {
   return useQuery({
-    queryKey: ['novels', filters],
-    queryFn: () => novelsService.getNovels(filters),
+    queryKey: ['novels'],
+    queryFn: novelsService.getNovels,
   });
 };
 
-export const useNovel = (id: number) => {
-  return useQuery({
-    queryKey: ['novels', id],
+export const useNovel = (id: string) => {
+  return useQuery<Novel>({
+    queryKey: ['novel', id],
     queryFn: () => novelsService.getNovelById(id),
     enabled: !!id,
   });

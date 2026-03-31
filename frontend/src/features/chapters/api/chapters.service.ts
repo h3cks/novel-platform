@@ -17,6 +17,11 @@ export const chaptersService = {
     return data;
   },
 
+  getChapter: async (novelId: string, chapterId: string): Promise<Chapter> => {
+    const { data } = await apiClient.get<Chapter>(`/novels/${novelId}/chapters/${chapterId}`);
+    return data;
+  },
+
   // Створити новий розділ (для авторів)
   createChapter: async (payload: CreateChapterDTO): Promise<Chapter> => {
     const { data } = await apiClient.post<Chapter>('/chapters', payload);

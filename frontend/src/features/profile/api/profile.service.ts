@@ -1,17 +1,20 @@
 import { apiClient } from '@/lib/axios';
-import { User } from '@/features/auth/types';
-import { UpdateProfileDTO } from '../types';
+import { UserProfile } from '../types';
+import { SettingsFormValues } from '../schemas/settings.schema';
 
 export const profileService = {
-  // Получение профиля по имени пользователя (публичный доступ)
-  getProfile: async (username: string): Promise<User> => {
-    const { data } = await apiClient.get<User>(`/profile/${username}`);
+  getMe: async (): Promise<UserProfile> => {
+    const { data } = await apiClient.get<UserProfile>('/auth/me');
     return data;
   },
 
-  // Обновление профиля текущего пользователя
-  updateProfile: async (payload: UpdateProfileDTO): Promise<User> => {
-    const { data } = await apiClient.patch<User>('/profile', payload);
+  getProfileById: async (id: string | number): Promise<UserProfile> => {
+    const { data } = await apiClient.get<UserProfile>(`/users/${id}`);
     return data;
-  }
+  },
+
+  updateProfile: async (payload: SettingsFormValues): Promise<UserProfile> => {
+    const { data } = await apiClient.patch<UserProfile>('/users/me', payload);
+    return data;
+  },
 };

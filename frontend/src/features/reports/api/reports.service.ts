@@ -1,27 +1,18 @@
 import { apiClient } from '@/lib/axios';
-
-export interface ReportDTO {
-  targetType: 'NOVEL' | 'CHAPTER' | 'COMMENT' | 'USER';
-  targetId: number;
-  reason: string;
-  detail?: string;
-}
+import { Report, UpdateReportDTO } from '../types';
 
 export const reportsService = {
-  // Для обычных пользователей
-  createReport: async (data: ReportDTO) => {
-    const response = await apiClient.post('/reports', data);
-    return response.data;
+  // Отримати всі скарги (з опціональним фільтром по статусу)
+  getReports: async (status?: string): Promise<Report[]> => {
+    const { data } = await apiClient.get<Report[]>('/admin/reports', {
+      params: { status }
+    });
+    return data;
   },
 
-  // Для модераторов / администраторов
-  getReports: async (status?: string) => {
-    const { data } = await apiClient.get('/reports', { params: { status } });
-    return data.data; // Зависит от формата обертки ответа бэкенда
+  // Оновити статус скарги
+  updateReport: async (id: number, payload: UpdateReportDTO): Promise<Report> => {
+    const { data } = await apiClient.patch<Report>(`/admin/reports/${id}`, payload);
+    return data;
   },
-
-  updateReportStatus: async (id: number, status: 'OPEN' | 'IN_PROGRESS' | 'RESOLVED' | 'DISMISSED') => {
-    const response = await apiClient.patch(`/reports/${id}`, { status });
-    return response.data;
-  }
 };
