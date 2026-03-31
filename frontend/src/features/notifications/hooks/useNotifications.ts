@@ -3,7 +3,7 @@ import { notificationsService } from '../api/notifications.service';
 import { useAuthStore } from '@/features/auth/store/useAuthStore';
 
 export const useNotifications = () => {
-  const isAuthenticated = useAuthStore((state) => state.isAuthenticated());
+  const isAuthenticated = useAuthStore((state) => !!state.token);
 
   return useQuery({
     queryKey: ['notifications'],

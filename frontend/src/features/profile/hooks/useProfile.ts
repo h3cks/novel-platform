@@ -3,7 +3,7 @@ import { profileService } from '../api/profile.service';
 import { useAuthStore } from '@/features/auth/store/useAuthStore';
 
 export const useProfile = (userId?: string) => {
-  const isAuthenticated = useAuthStore((state) => state.isAuthenticated());
+  const isAuthenticated = useAuthStore((state) => !!state.token);
 
   return useQuery({
     queryKey: ['profile', userId || 'me'],
