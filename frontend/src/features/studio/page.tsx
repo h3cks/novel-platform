@@ -39,7 +39,8 @@ export default function StudioDashboard() {
             </tr>
             </thead>
             <tbody className="divide-y">
-            {myNovels?.data?.map((novel) => (
+            {/* Виправляємо myNovels?.data?.map на myNovels?.map */}
+            {myNovels?.map((novel) => (
               <tr key={novel.id} className="hover:bg-gray-50 transition">
                 <td className="p-4 font-medium text-gray-900">{novel.title}</td>
                 <td className="p-4">
@@ -55,7 +56,8 @@ export default function StudioDashboard() {
                 </td>
               </tr>
             ))}
-            {myNovels?.data?.length === 0 && (
+            {/* Виправляємо myNovels?.data?.length на myNovels?.length */}
+            {myNovels?.length === 0 && (
               <tr>
                 <td colSpan={3} className="p-8 text-center text-gray-500">У вас ще немає створених новел.</td>
               </tr>

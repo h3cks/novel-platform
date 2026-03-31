@@ -16,7 +16,7 @@ interface CommentFormProps {
 
 export const CommentForm = ({ novelId, chapterId, parentId, placeholder = 'Написати коментар...', onSuccess, autoFocus }: CommentFormProps) => {
   const [text, setText] = useState('');
-  const isAuthenticated = useAuthStore((state) => state.isAuthenticated());
+  const isAuthenticated = useAuthStore((state) => !!state.token);
   const { mutate: createComment, isPending } = useCreateComment({ novelId, chapterId });
 
   if (!isAuthenticated) {

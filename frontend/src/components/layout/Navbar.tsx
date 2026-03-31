@@ -3,14 +3,26 @@
 import Link from 'next/link';
 import { useAuthStore } from '@/features/auth/store/useAuthStore';
 import { useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
 
 export const Navbar = () => {
-  const { isAuthenticated, user, logout } = useAuthStore();
+  // Використовуємо селектори для кращої продуктивності
+  const user = useAuthStore((state) => state.user);
+  const token = useAuthStore((state) => state.token);
+  const logout = useAuthStore((state) => state.logout);
   const router = useRouter();
+
+  // Захист від Hydration Error
+  const [isMounted, setIsMounted] = useState(false);
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  const isAuthenticated = !!token;
 
   const handleLogout = () => {
     logout();
-    router.push('/login');
+    router.push('/auth/login'); // Виправлено шлях
   };
 
   return (
@@ -20,14 +32,18 @@ export const Navbar = () => {
           <Link href="/" className="text-xl font-bold text-blue-600">NovelHub</Link>
           <div className="hidden md:flex space-x-4">
             <Link href="/novels" className="text-gray-600 hover:text-blue-600 font-medium">Каталог</Link>
-            {isAuthenticated && (
+            {/* Рендеримо специфічні лінки тільки після монтування клієнта */}
+            {isMounted && isAuthenticated && (
               <Link href="/library" className="text-gray-600 hover:text-blue-600 font-medium">Моя Бібліотека</Link>
             )}
           </div>
         </div>
 
         <div className="flex items-center space-x-4">
-          {isAuthenticated ? (
+          {/* Показуємо скелетон або нічого, поки клієнт не змонтувався, щоб уникнути мигання UI */}
+          {!isMounted ? (
+            <div className="w-24 h-8 bg-gray-100 animate-pulse rounded-md"></div>
+          ) : isAuthenticated ? (
             <>
               {(user?.role === 'AUTHOR' || user?.role === 'ADMIN') && (
                 <Link href="/studio" className="text-sm bg-gray-100 px-3 py-1.5 rounded-md hover:bg-gray-200">
@@ -39,8 +55,8 @@ export const Navbar = () => {
             </>
           ) : (
             <>
-              <Link href="/login" className="text-gray-600 hover:text-blue-600 font-medium">Увійти</Link>
-              <Link href="/register" className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition">
+              <Link href="/auth/login" className="text-gray-600 hover:text-blue-600 font-medium">Увійти</Link>
+              <Link href="/auth/register" className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition">
                 Реєстрація
               </Link>
             </>
