@@ -1,19 +1,16 @@
-import { User } from '@/features/auth/types';
+import { User } from '../auth/types';
 
 export type NovelStatus = 'DRAFT' | 'REVIEWING' | 'PUBLISHED' | 'BLOCKED';
 
 export interface Novel {
   id: number;
-  authorId: number;
-  author?: User; // Связь с автором
   title: string;
   description: string | null;
   status: NovelStatus;
   coverUrl: string | null;
-  autoPublished: boolean;
-  publishedAt: string | null;
+  authorId: number;
+  author?: User; // Опціонально, якщо бекенд повертає зв'язки (include)
   wordCount: number | null;
-  flagged: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -21,7 +18,6 @@ export interface Novel {
 export interface CreateNovelDTO {
   title: string;
   description?: string;
-  coverUrl?: string;
 }
 
 export interface UpdateNovelDTO {

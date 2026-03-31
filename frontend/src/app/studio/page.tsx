@@ -1,69 +1,39 @@
-'use client';
-
-import { useQuery } from '@tanstack/react-query';
-import { novelsService } from '@/features/novels/api/novels.service';
-import { useAuthStore } from '@/features/auth/store/useAuthStore';
+import type { Metadata } from 'next';
 import Link from 'next/link';
 
+export const metadata: Metadata = {
+  title: 'Студія Автора | NovelHub',
+};
+
 export default function StudioDashboard() {
-  const { user } = useAuthStore();
-
-  const { data: myNovels, isLoading } = useQuery({
-    queryKey: ['novels', 'my', user?.id],
-    queryFn: () => novelsService.getNovels({ authorId: user?.id, limit: 50 }),
-    enabled: !!user?.id,
-  });
-
   return (
-    <div className="container mx-auto">
-      <div className="flex justify-between items-center mb-8">
-        <h1 className="text-3xl font-bold">Студія Автора</h1>
+    <div className="max-w-5xl mx-auto py-8 px-4 sm:px-6">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">Студія Автора</h1>
+          <p className="text-gray-600 mt-1">Керуйте своїми історіями та публікаціями</p>
+        </div>
+
         <Link
           href="/studio/novels/create"
-          className="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 transition"
+          className="bg-blue-600 text-white px-5 py-2.5 rounded-md font-medium hover:bg-blue-700 transition-colors shadow-sm"
         >
           + Створити новелу
         </Link>
       </div>
 
-      {isLoading ? (
-        <div>Завантаження ваших робіт...</div>
-      ) : (
-        <div className="bg-white rounded-xl shadow-sm border overflow-hidden">
-          <table className="w-full text-left border-collapse">
-            <thead>
-            <tr className="bg-gray-50 border-b">
-              <th className="p-4 font-medium text-gray-600">Назва</th>
-              <th className="p-4 font-medium text-gray-600">Статус</th>
-              <th className="p-4 font-medium text-gray-600">Дії</th>
-            </tr>
-            </thead>
-            <tbody className="divide-y">
-            {myNovels?.data?.map((novel) => (
-              <tr key={novel.id} className="hover:bg-gray-50 transition">
-                <td className="p-4 font-medium text-gray-900">{novel.title}</td>
-                <td className="p-4">
-                    <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
-                      novel.status === 'PUBLISHED' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'
-                    }`}>
-                      {novel.status}
-                    </span>
-                </td>
-                <td className="p-4 space-x-4">
-                  <Link href={`/studio/novels/${novel.id}/edit`} className="text-blue-600 hover:underline">Редагувати</Link>
-                  <Link href={`/studio/novels/${novel.id}/chapters`} className="text-purple-600 hover:underline">Розділи</Link>
-                </td>
-              </tr>
-            ))}
-            {myNovels?.data?.length === 0 && (
-              <tr>
-                <td colSpan={3} className="p-8 text-center text-gray-500">У вас ще немає створених новел.</td>
-              </tr>
-            )}
-            </tbody>
-          </table>
+      <div className="bg-white border border-gray-200 rounded-lg p-12 text-center shadow-sm">
+        <div className="w-16 h-16 bg-blue-50 text-blue-500 rounded-full flex items-center justify-center mx-auto mb-4">
+          <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+          </svg>
         </div>
-      )}
+        <h3 className="text-lg font-medium text-gray-900 mb-2">У вас ще немає творів</h3>
+        <p className="text-gray-500 mb-6 max-w-md mx-auto">
+          Почніть свою письменницьку подорож прямо зараз. Створіть першу новелу, додайте розділи та поділіться нею з читачами.
+        </p>
+        {/* У майбутньому тут буде рендеритись <AuthorNovelList /> замість цієї заглушки */}
+      </div>
     </div>
   );
 }

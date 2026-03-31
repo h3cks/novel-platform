@@ -1,0 +1,174 @@
+'use client';
+
+import { useEffect, useState } from 'react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { settingsSchema, SettingsFormValues } from '../schemas/settings.schema';
+import { useProfile } from '../hooks/useProfile';
+import { useUpdateProfile } from '../hooks/useUpdateProfile';
+import Link from 'next/link';
+
+export const SettingsForm = () => {
+  const { data: profile, isLoading: isProfileLoading } = useProfile();
+  const { mutate: updateProfile, isPending: isUpdating, isSuccess, error } = useUpdateProfile();
+  const [successMessage, setSuccessMessage] = useState(false);
+
+  const {
+    register,
+    handleSubmit,
+    reset,
+    formState: { errors, isDirty },
+  } = useForm<SettingsFormValues>({
+    resolver: zodResolver(settingsSchema),
+    defaultValues: {
+      displayName: '',
+      bio: '',
+      avatarUrl: '',
+    },
+  });
+
+  // Підставляємо поточні дані профілю, коли вони завантажаться
+  useEffect(() => {
+    if (profile) {
+      reset({
+        displayName: profile.displayName || '',
+        bio: profile.bio || '',
+        avatarUrl: profile.avatarUrl || '',
+      });
+    }
+  }, [profile, reset]);
+
+  // Показуємо повідомлення про успіх на кілька секунд
+  useEffect(() => {
+    if (isSuccess) {
+      setSuccessMessage(true);
+      const timer = setTimeout(() => setSuccessMessage(false), 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [isSuccess]);
+
+  const onSubmit = (data: SettingsFormValues) => {
+    updateProfile(data);
+  };
+
+  if (isProfileLoading) {
+    return (
+      <div className="animate-pulse space-y-6 max-w-2xl mx-auto bg-white p-8 rounded-xl border border-gray-100 shadow-sm">
+        <div className="h-8 bg-gray-200 rounded w-1/3 mb-6"></div>
+        <div className="h-12 bg-gray-200 rounded w-full"></div>
+        <div className="h-32 bg-gray-200 rounded w-full"></div>
+        <div className="h-12 bg-gray-200 rounded w-full"></div>
+      </div>
+    );
+  }
+
+  const apiError = error as any;
+
+  return (
+    <form onSubmit={handleSubmit(onSubmit)} className="max-w-2xl mx-auto bg-white p-6 md:p-8 rounded-xl shadow-sm border border-gray-100">
+      <div className="flex justify-between items-center mb-6 pb-4 border-b border-gray-100">
+        <h2 className="text-2xl font-bold text-gray-900">Налаштування профілю</h2>
+        <Link href="/profile" className="text-sm font-medium text-blue-600 hover:underline">
+          Мій профіль &rarr;
+        </Link>
+      </div>
+
+      {successMessage && (
+        <div className="mb-6 p-4 bg-green-50 text-green-700 rounded-md border border-green-200 flex items-center gap-2">
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+          Зміни успішно збережено!
+        </div>
+      )}
+
+      {error && (
+        <div className="mb-6 p-4 bg-red-50 text-red-600 rounded-md text-sm border border-red-200">
+          {apiError?.response?.data?.message || 'Сталася помилка при збереженні. Спробуйте пізніше.'}
+        </div>
+      )}
+
+      <div className="space-y-6">
+        {/* Аватар (Заглушка поля URL. В ідеалі тут має бути компонент ImageUpload) */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Посилання на аватар (URL)
+          </label>
+          <div className="flex gap-4 items-center">
+            <div className="w-16 h-16 shrink-0 rounded-full bg-gray-100 border border-gray-200 overflow-hidden flex items-center justify-center">
+              {profile?.avatarUrl ? (
+                <img src={profile.avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
+              ) : (
+                <span className="text-gray-400 font-medium">No pic</span>
+              )}
+            </div>
+            <div className="flex-1">
+              <input
+                {...register('avatarUrl')}
+                type="text"
+                disabled={isUpdating}
+                className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 outline-none transition disabled:bg-gray-50"
+                placeholder="https://example.com/my-avatar.png"
+              />
+              {errors.avatarUrl && <p className="text-red-500 text-sm mt-1">{errors.avatarUrl.message}</p>}
+            </div>
+          </div>
+          <p className="text-xs text-gray-500 mt-2">
+            Зараз підтримується лише пряме посилання на зображення. Інтеграція завантаження файлів буде додана пізніше.
+          </p>
+        </div>
+
+        {/* Відображуване ім'я */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Відображуване ім'я
+          </label>
+          <input
+            {...register('displayName')}
+            type="text"
+            disabled={isUpdating}
+            className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 outline-none transition disabled:bg-gray-50"
+            placeholder="Введіть ваше ім'я..."
+          />
+          {errors.displayName && <p className="text-red-500 text-sm mt-1">{errors.displayName.message}</p>}
+        </div>
+
+        {/* Біографія */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Про себе
+          </label>
+          <textarea
+            {...register('bio')}
+            rows={5}
+            disabled={isUpdating}
+            className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 outline-none transition disabled:bg-gray-50 resize-y"
+            placeholder="Розкажіть трохи про себе..."
+          />
+          {errors.bio && <p className="text-red-500 text-sm mt-1">{errors.bio.message}</p>}
+        </div>
+
+        {/* Інформаційні поля (тільки для читання) */}
+        <div className="pt-4 border-t border-gray-100 grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-xs font-medium text-gray-500 mb-1">Email (не можна змінити)</label>
+            <input type="text" disabled value={profile?.email || ''} className="w-full px-3 py-2 bg-gray-100 border border-gray-200 rounded-md text-gray-600 text-sm cursor-not-allowed" />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-500 mb-1">Username (не можна змінити)</label>
+            <input type="text" disabled value={profile?.username || ''} className="w-full px-3 py-2 bg-gray-100 border border-gray-200 rounded-md text-gray-600 text-sm cursor-not-allowed" />
+          </div>
+        </div>
+
+        {/* Кнопка збереження */}
+        <div className="flex justify-end pt-4">
+          <button
+            type="submit"
+            disabled={isUpdating || !isDirty}
+            className="bg-blue-600 text-white px-8 py-2.5 rounded-md font-semibold hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {isUpdating ? 'Збереження...' : 'Зберегти зміни'}
+          </button>
+        </div>
+      </div>
+    </form>
+  );
+};
