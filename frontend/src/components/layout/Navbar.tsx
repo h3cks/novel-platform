@@ -6,57 +6,57 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
 export const Navbar = () => {
-  // Використовуємо селектори для кращої продуктивності
   const user = useAuthStore((state) => state.user);
   const token = useAuthStore((state) => state.token);
   const logout = useAuthStore((state) => state.logout);
   const router = useRouter();
 
-  // Захист від Hydration Error
   const [isMounted, setIsMounted] = useState(false);
-  useEffect(() => {
-    setIsMounted(true);
-  }, []);
+  useEffect(() => setIsMounted(true), []);
 
   const isAuthenticated = !!token;
 
   const handleLogout = () => {
     logout();
-    router.push('/auth/login'); // Виправлено шлях
+    router.push('/auth/login');
   };
 
   return (
-    <nav className="bg-white border-b sticky top-0 z-50 shadow-sm">
+    <nav className="bg-white/80 backdrop-blur-md border-b border-slate-200 sticky top-0 z-50 transition-all">
       <div className="container mx-auto px-4 h-16 flex items-center justify-between">
         <div className="flex items-center space-x-8">
-          <Link href="/" className="text-xl font-bold text-blue-600">NovelHub</Link>
-          <div className="hidden md:flex space-x-4">
-            <Link href="/novels" className="text-gray-600 hover:text-blue-600 font-medium">Каталог</Link>
-            {/* Рендеримо специфічні лінки тільки після монтування клієнта */}
+          <Link href="/" className="text-2xl font-extrabold text-primary-600 tracking-tight hover:text-primary-700 transition-colors">
+            NovelHub
+          </Link>
+          <div className="hidden md:flex space-x-6">
+            <Link href="/novels" className="text-slate-600 hover:text-primary-600 font-medium transition-colors">Каталог</Link>
             {isMounted && isAuthenticated && (
-              <Link href="/library" className="text-gray-600 hover:text-blue-600 font-medium">Моя Бібліотека</Link>
+              <Link href="/library" className="text-slate-600 hover:text-primary-600 font-medium transition-colors">Моя Бібліотека</Link>
             )}
           </div>
         </div>
 
-        <div className="flex items-center space-x-4">
-          {/* Показуємо скелетон або нічого, поки клієнт не змонтувався, щоб уникнути мигання UI */}
+        <div className="flex items-center space-x-5">
           {!isMounted ? (
-            <div className="w-24 h-8 bg-gray-100 animate-pulse rounded-md"></div>
+            <div className="w-24 h-9 bg-slate-100 animate-pulse rounded-xl"></div>
           ) : isAuthenticated ? (
             <>
               {(user?.role === 'AUTHOR' || user?.role === 'ADMIN') && (
-                <Link href="/studio" className="text-sm bg-gray-100 px-3 py-1.5 rounded-md hover:bg-gray-200">
+                <Link href="/studio" className="text-sm font-semibold bg-slate-100 text-slate-700 px-4 py-2 rounded-xl hover:bg-slate-200 transition-colors">
                   Студія Автора
                 </Link>
               )}
-              <Link href="/profile" className="text-gray-700 font-medium">{user?.username || 'Профіль'}</Link>
-              <button onClick={handleLogout} className="text-red-500 text-sm hover:underline">Вийти</button>
+              <Link href="/profile" className="text-slate-700 font-semibold hover:text-primary-600 transition-colors">
+                {user?.username || 'Профіль'}
+              </Link>
+              <button onClick={handleLogout} className="text-slate-400 hover:text-red-500 font-medium transition-colors">
+                Вийти
+              </button>
             </>
           ) : (
             <>
-              <Link href="/auth/login" className="text-gray-600 hover:text-blue-600 font-medium">Увійти</Link>
-              <Link href="/auth/register" className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition">
+              <Link href="/auth/login" className="text-slate-600 hover:text-primary-600 font-medium transition-colors">Увійти</Link>
+              <Link href="/auth/register" className="bg-primary-600 text-white px-5 py-2.5 rounded-xl font-semibold hover:bg-primary-700 shadow-sm hover:shadow transition-all duration-200 hover:-translate-y-0.5">
                 Реєстрація
               </Link>
             </>
