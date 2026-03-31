@@ -3,8 +3,9 @@ import { LoginCredentials, RegisterCredentials, AuthResponse, User } from '../ty
 
 export const authService = {
   login: async (credentials: LoginCredentials): Promise<AuthResponse> => {
-    const { data } = await apiClient.post<AuthResponse>('/auth/login', credentials);
-    return data;
+    const { data } = await apiClient.post('/auth/login', credentials);
+    // Розгортаємо, бо бекенд повертає { data: { token, user } }
+    return data.data;
   },
 
   register: async (credentials: RegisterCredentials): Promise<void> => {
@@ -12,7 +13,8 @@ export const authService = {
   },
 
   getMe: async (): Promise<User> => {
-    const { data } = await apiClient.get<User>('/auth/me');
-    return data;
+    const { data } = await apiClient.get('/auth/me');
+    // Розгортаємо, бо бекенд повертає { data: { user: {...} } }
+    return data.data.user;
   }
 };
