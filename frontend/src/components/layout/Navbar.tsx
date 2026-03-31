@@ -5,7 +5,8 @@ import { useAuthStore } from '@/features/auth/store/useAuthStore';
 import { useRouter } from 'next/navigation';
 
 export const Navbar = () => {
-  const { isAuthenticated, user, logout } = useAuthStore();
+  const { user, logout } = useAuthStore();
+  const isAuthenticated = useAuthStore((state) => !!state.token);
   const router = useRouter();
 
   const handleLogout = () => {
