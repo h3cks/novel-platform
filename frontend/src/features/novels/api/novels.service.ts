@@ -4,13 +4,10 @@ import { Novel, CreateNovelDTO, UpdateNovelDTO } from '../types';
 export const novelsService = {
   getNovels: async (params?: Record<string, any>): Promise<Novel[]> => {
     const { data } = await apiClient.get('/novels', { params });
-    // Розгортаємо data.data, бо бекенд повертає { success: true, data: [...] }
-    return data.data;
+    return data.data; // Повертає масив новел
   },
-
   getNovelById: async (id: number | string): Promise<Novel> => {
     const { data } = await apiClient.get(`/novels/${id}`);
-    // Бекенд повертає { success: true, data: { novel: {...} } }
     return data.data.novel;
   },
 
