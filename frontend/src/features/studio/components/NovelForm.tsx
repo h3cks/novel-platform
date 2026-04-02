@@ -1,9 +1,10 @@
 'use client';
 
-import { useForm } from 'react-hook-form';
+import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { novelSchema, NovelFormValues } from '../schemas/novel.schema';
 import { useCreateNovel } from '../hooks/useCreateNovel';
+import { ImageUpload } from '@/components/ui/ImageUpload';
 import Link from 'next/link';
 
 export const NovelForm = () => {
@@ -12,6 +13,7 @@ export const NovelForm = () => {
   const {
     register,
     handleSubmit,
+    control,
     formState: { errors },
   } = useForm<NovelFormValues>({
     resolver: zodResolver(novelSchema),
@@ -34,54 +36,57 @@ export const NovelForm = () => {
         </div>
       )}
 
-      <div className="space-y-6">
-        {/* Поле: Назва */}
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">
+          Обкладинка новели
+        </label>
+        <Controller
+          name="coverUrl"
+          control={control}
+          render={({ field: { onChange, value } }) => (
+            <ImageUpload
+              value={value}
+              onChange={onChange}
+              disabled={isPending}
+              shape="rectangle"
+              placeholder="Завантажити обкладинку"
+            />
+          )}
+        />
+        {errors.coverUrl && <p className="text-red-500 text-sm mt-1">{errors.coverUrl.message}</p>}
+      </div>
+
+      {/* Поля: Жанри та Теги (Спрощена версія, краще використовувати react-select) */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div>
-          <label htmlFor="title" className="block text-sm font-medium text-gray-700 mb-1">
-            Назва новели <span className="text-red-500">*</span>
+          <label htmlFor="genres" className="block text-sm font-medium text-gray-700 mb-1">
+            Жанр
+          </label>
+          <select
+            id="genres"
+            {...register('genres')}
+            disabled={isPending}
+            className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 outline-none bg-white"
+          >
+            <option value="">Оберіть жанр...</option>
+            <option value="FANTASY">Фентезі</option>
+            <option value="SCI_FI">Наукова фантастика</option>
+            <option value="ROMANCE">Романтика</option>
+          </select>
+        </div>
+
+        <div>
+          <label htmlFor="tags" className="block text-sm font-medium text-gray-700 mb-1">
+            Теги (через кому)
           </label>
           <input
-            id="title"
-            {...register('title')}
+            id="tags"
+            {...register('tags')}
             disabled={isPending}
             type="text"
-            className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 outline-none transition-shadow disabled:bg-gray-50"
-            placeholder="Введіть захоплюючу назву..."
+            className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 outline-none"
+            placeholder="магія, реінкарнація, система..."
           />
-          {errors.title && <p className="text-red-500 text-sm mt-1">{errors.title.message}</p>}
-        </div>
-
-        {/* Поле: Опис */}
-        <div>
-          <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-1">
-            Синопсис / Опис
-          </label>
-          <textarea
-            id="description"
-            {...register('description')}
-            disabled={isPending}
-            rows={6}
-            className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 outline-none transition-shadow disabled:bg-gray-50 resize-y"
-            placeholder="Про що ваша історія? Зацікавте читачів..."
-          />
-          {errors.description && <p className="text-red-500 text-sm mt-1">{errors.description.message}</p>}
-        </div>
-
-        {/* Кнопки */}
-        <div className="flex items-center justify-end gap-4 pt-4 border-t border-gray-100">
-          <Link
-            href="/studio"
-            className="px-4 py-2 text-gray-600 hover:text-gray-900 font-medium transition-colors"
-          >
-            Скасувати
-          </Link>
-          <button
-            type="submit"
-            disabled={isPending}
-            className="bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700 font-medium transition-colors disabled:opacity-50 flex items-center gap-2"
-          >
-            {isPending ? 'Збереження...' : 'Створити новелу'}
-          </button>
         </div>
       </div>
     </form>

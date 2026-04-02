@@ -1,14 +1,19 @@
 import { z } from 'zod';
 
 export const novelSchema = z.object({
-  title: z
+  title: z.string().min(1, 'Назва новели обовʼязкова').max(100, 'Назва занадто довга'),
+  description: z.string().optional(),
+
+  // ДОДАНО НОВІ ПОЛЯ:
+  coverUrl: z
     .string()
-    .min(3, 'Назва має містити мінімум 3 символи')
-    .max(100, 'Назва занадто довга (максимум 100 символів)'),
-  description: z
-    .string()
-    .max(2000, 'Опис занадто довгий (максимум 2000 символів)')
-    .optional(),
+    .url('Введіть коректний URL (посилання)')
+    .optional()
+    .or(z.literal('')), // Дозволяємо порожній рядок, якщо обкладинки немає
+
+  genres: z.string().optional(),
+
+  tags: z.string().optional(),
 });
 
 export type NovelFormValues = z.infer<typeof novelSchema>;

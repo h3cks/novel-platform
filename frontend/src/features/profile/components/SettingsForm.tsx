@@ -1,9 +1,10 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { settingsSchema, SettingsFormValues } from '../schemas/settings.schema';
+import { ImageUpload } from '@/components/ui/ImageUpload';
 import { useProfile } from '../hooks/useProfile';
 import { useUpdateProfile } from '../hooks/useUpdateProfile';
 import Link from 'next/link';
@@ -16,6 +17,7 @@ export const SettingsForm = () => {
   const {
     register,
     handleSubmit,
+    control,
     reset,
     formState: { errors, isDirty },
   } = useForm<SettingsFormValues>({
@@ -65,7 +67,7 @@ export const SettingsForm = () => {
   const apiError = error as any;
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="max-w-2xl mx-auto bg-white p-6 md:p-8 rounded-xl shadow-sm border border-gray-100">
+    <form onSubmit={handleSubmit(onSubmit)} className="max-w-2xl mx-auto bg-white p-4 sm:p-6 md:p-8 rounded-xl shadow-sm border border-gray-100">
       <div className="flex justify-between items-center mb-6 pb-4 border-b border-gray-100">
         <h2 className="text-2xl font-bold text-gray-900">Налаштування профілю</h2>
         <Link href="/profile" className="text-sm font-medium text-blue-600 hover:underline">
@@ -87,33 +89,27 @@ export const SettingsForm = () => {
       )}
 
       <div className="space-y-6">
-        {/* Аватар (Заглушка поля URL. В ідеалі тут має бути компонент ImageUpload) */}
+        {/* Аватар */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Посилання на аватар (URL)
+          <label className="block text-sm font-medium text-gray-700 mb-3">
+            Аватар профілю
           </label>
-          <div className="flex gap-4 items-center">
-            <div className="w-16 h-16 shrink-0 rounded-full bg-gray-100 border border-gray-200 overflow-hidden flex items-center justify-center">
-              {profile?.avatarUrl ? (
-                <img src={profile.avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
-              ) : (
-                <span className="text-gray-400 font-medium">No pic</span>
+          <div className="w-32 h-32"> {/* Задаємо розмір контейнера для аватара */}
+            <Controller
+              name="avatarUrl"
+              control={control}
+              render={({ field: { onChange, value } }) => (
+                <ImageUpload
+                  value={value}
+                  onChange={onChange}
+                  disabled={isUpdating}
+                  shape="circle"
+                  placeholder="Оновити фото"
+                />
               )}
-            </div>
-            <div className="flex-1">
-              <input
-                {...register('avatarUrl')}
-                type="text"
-                disabled={isUpdating}
-                className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 outline-none transition disabled:bg-gray-50"
-                placeholder="https://example.com/my-avatar.png"
-              />
-              {errors.avatarUrl && <p className="text-red-500 text-sm mt-1">{errors.avatarUrl.message}</p>}
-            </div>
+            />
           </div>
-          <p className="text-xs text-gray-500 mt-2">
-            Зараз підтримується лише пряме посилання на зображення. Інтеграція завантаження файлів буде додана пізніше.
-          </p>
+          {errors.avatarUrl && <p className="text-red-500 text-sm mt-1">{errors.avatarUrl.message}</p>}
         </div>
 
         {/* Відображуване ім'я */}
@@ -125,7 +121,11 @@ export const SettingsForm = () => {
             {...register('displayName')}
             type="text"
             disabled={isUpdating}
-            className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 outline-none transition disabled:bg-gray-50"
+            className={`w-full px-4 py-2 border rounded-md outline-none transition disabled:bg-gray-50 focus:ring-2 ${
+              errors.displayName
+                ? 'border-red-500 focus:ring-red-500 bg-red-50' 
+                : 'border-gray-300 focus:ring-blue-500' 
+            }`}
             placeholder="Введіть ваше ім'я..."
           />
           {errors.displayName && <p className="text-red-500 text-sm mt-1">{errors.displayName.message}</p>}

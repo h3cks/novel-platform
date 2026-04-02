@@ -7,6 +7,8 @@ export interface Chapter {
   wordCount: number | null;
   createdAt: string;
   updatedAt: string;
+  prevChapterId?: number | string | null;
+  nextChapterId?: number | string | null;
 }
 
 export interface CreateChapterDTO {

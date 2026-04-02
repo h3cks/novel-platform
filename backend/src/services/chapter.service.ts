@@ -282,7 +282,29 @@ export async function getChapterById(id: number) {
       },
     },
   });
-  return chapter;
+
+  if (!chapter) return null;
+
+  // Шукаємо попередню главу (найбільший order, але менший за поточний)
+  const prevChapter = await prisma.chapter.findFirst({
+    where: { novelId: chapter.novelId, order: { lt: chapter.order } },
+    orderBy: { order: 'desc' },
+    select: { id: true },
+  });
+
+  // Шукаємо наступну главу (найменший order, але більший за поточний)
+  const nextChapter = await prisma.chapter.findFirst({
+    where: { novelId: chapter.novelId, order: { gt: chapter.order } },
+    orderBy: { order: 'asc' },
+    select: { id: true },
+  });
+
+  // Повертаємо главу разом з ID сусідів
+  return {
+    ...chapter,
+    prevChapterId: prevChapter?.id || null,
+    nextChapterId: nextChapter?.id || null,
+  };
 }
 
 export async function updateChapter(chapterId: number, data: { title?: string; content?: string }) {
