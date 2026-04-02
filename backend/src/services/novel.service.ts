@@ -18,14 +18,14 @@ export type NovelCreateInput = {
   title: string;
   description?: string | null;
   coverUrl?: string | null;
-  genreIds?: number[]; // connect existing genres by id (only existing)
-  genreNames?: string[]; // connect by name (existing), optionally create missing if flag set (admin)
-  createMissingGenres?: boolean; // only allow when controller passes admin permission
-  tagIds?: number[]; // connect existing tags by id (only existing) — NEW
+  genreIds?: number[];
+  genreNames?: string[];
+  createMissingGenres?: boolean;
+  tagIds?: number[];
 };
 
 export async function createNovel(data: NovelCreateInput, authorId: number) {
-  // validate counts and existence BEFORE creating the novel
+  // Валідація кількості
   if (Array.isArray(data.genreIds) && data.genreIds.length > MAX_GENRES) {
     throw { code: 'INVALID_PAYLOAD', message: `Max ${MAX_GENRES} genres allowed` };
   }
@@ -33,7 +33,7 @@ export async function createNovel(data: NovelCreateInput, authorId: number) {
     throw { code: 'INVALID_PAYLOAD', message: `Max ${MAX_TAGS} tags allowed` };
   }
 
-  // validate existence of provided genreIds (if any)
+  // Валідація існування жанрів
   if (Array.isArray(data.genreIds) && data.genreIds.length > 0) {
     const existing = await prisma.genre.findMany({
       where: { id: { in: data.genreIds } },
@@ -46,7 +46,7 @@ export async function createNovel(data: NovelCreateInput, authorId: number) {
     }
   }
 
-  // validate existence of provided tagIds (if any)
+  // Валідація існування тегів
   if (Array.isArray(data.tagIds) && data.tagIds.length > 0) {
     const existing = await prisma.tag.findMany({
       where: { id: { in: data.tagIds } },
@@ -70,50 +70,42 @@ export async function createNovel(data: NovelCreateInput, authorId: number) {
       },
     });
 
-    // connect by genreIds (guaranteed exist)
+    // Оптимізоване додавання жанрів через createMany
     if (Array.isArray(data.genreIds) && data.genreIds.length > 0) {
-      for (const gid of data.genreIds) {
-        // assume validated above
-        try {
-          await tx.novelGenre.create({ data: { novelId: created.id, genreId: gid } });
-        } catch (e) {
-          // ignore duplicate or transient errors for individual relations
-        }
-      }
+      const genreData = data.genreIds.map((gid) => ({ novelId: created.id, genreId: gid }));
+      await tx.novelGenre.createMany({
+        data: genreData,
+        skipDuplicates: true,
+      });
     }
 
-    // connect by genreNames (only existing unless createMissingGenres true)
+    // Додавання жанрів за іменами (тут залишаємо цикл, бо можливе створення нових записів)
     if (Array.isArray(data.genreNames) && data.genreNames.length > 0) {
       for (const raw of data.genreNames) {
         const name = String(raw).trim();
         if (!name) continue;
         const existing = await tx.genre.findUnique({ where: { name } });
+
         if (existing) {
           try {
             await tx.novelGenre.create({ data: { novelId: created.id, genreId: existing.id } });
-          } catch (e) {}
+          } catch (e) {} // ігноруємо можливі дублікати
         } else if (data.createMissingGenres) {
           try {
             const newGenre = await tx.genre.create({ data: { name, slug: toSlug(name) } });
             await tx.novelGenre.create({ data: { novelId: created.id, genreId: newGenre.id } });
-          } catch (e) {
-            // ignore
-          }
-        } else {
-          // skip unknown genre (we could also throw — controller already validated genreIds; genreNames are optional)
+          } catch (e) {}
         }
       }
     }
 
-    // connect by tagIds (guaranteed exist)
+
     if (Array.isArray(data.tagIds) && data.tagIds.length > 0) {
-      for (const tid of data.tagIds) {
-        try {
-          await tx.novelTag.create({ data: { novelId: created.id, tagId: tid } });
-        } catch (e) {
-          // ignore duplicates
-        }
-      }
+      const tagData = data.tagIds.map((tid) => ({ novelId: created.id, tagId: tid }));
+      await tx.novelTag.createMany({
+        data: tagData,
+        skipDuplicates: true,
+      });
     }
 
     return created;
@@ -129,7 +121,7 @@ export type FindNovelsOptions = {
   requester?: { id: number; role: string } | null;
   genreId?: number | null;
   tagName?: string | null;
-  tagId?: number | null; // NEW: optional filter by tag id
+  tagId?: number | null;
 };
 
 export async function findNovels(opts: FindNovelsOptions) {
@@ -165,47 +157,15 @@ export async function findNovels(opts: FindNovelsOptions) {
     }
   }
 
-  // if filtering by genre or tag -> restrict by novel ids
-  if (opts.genreId || opts.tagName || opts.tagId) {
-    let allowedIds: number[] | null = null;
+  // Делегована фільтрація базі даних (виправлено витік пам'яті)
+  if (opts.genreId) {
+    where.genres = { some: { genreId: opts.genreId } };
+  }
 
-    if (opts.genreId) {
-      const rows = await prisma.novelGenre.findMany({
-        where: { genreId: opts.genreId },
-        select: { novelId: true },
-      });
-      const ids = rows.map((r) => r.novelId);
-      if (ids.length === 0) return { items: [], meta: { page, limit, total: 0 } };
-      allowedIds = ids;
-    }
-
-    if (opts.tagName) {
-      const tag = await prisma.tag.findUnique({ where: { name: opts.tagName } });
-      if (!tag) return { items: [], meta: { page, limit, total: 0 } };
-      const rows = await prisma.novelTag.findMany({
-        where: { tagId: tag.id },
-        select: { novelId: true },
-      });
-      const ids = rows.map((r) => r.novelId);
-      if (ids.length === 0) return { items: [], meta: { page, limit, total: 0 } };
-      if (allowedIds === null) allowedIds = ids;
-      else allowedIds = allowedIds.filter((i) => ids.includes(i));
-      if (allowedIds.length === 0) return { items: [], meta: { page, limit, total: 0 } };
-    }
-
-    if (typeof opts.tagId === 'number') {
-      const rows = await prisma.novelTag.findMany({
-        where: { tagId: opts.tagId },
-        select: { novelId: true },
-      });
-      const ids = rows.map((r) => r.novelId);
-      if (ids.length === 0) return { items: [], meta: { page, limit, total: 0 } };
-      if (allowedIds === null) allowedIds = ids;
-      else allowedIds = allowedIds.filter((i) => ids.includes(i));
-      if (allowedIds.length === 0) return { items: [], meta: { page, limit, total: 0 } };
-    }
-
-    where.id = { in: allowedIds as number[] };
+  if (opts.tagId) {
+    where.tags = { some: { tagId: opts.tagId } };
+  } else if (opts.tagName) {
+    where.tags = { some: { tag: { name: opts.tagName } } };
   }
 
   const [total, items] = await Promise.all([
@@ -233,7 +193,6 @@ export async function getNovelById(id: number) {
       author: { select: { id: true, username: true, displayName: true, avatarUrl: true } },
       tags: { include: { tag: true } },
       genres: { include: { genre: true } },
-      // do not include heavy relations by default (chapters omitted)
     },
   });
   return novel;
@@ -247,11 +206,10 @@ export async function updateNovel(
     coverUrl?: string | null;
     genreIds?: number[] | null;
     genreNames?: string[] | null;
-    createMissingGenres?: boolean; // controller must only set true for admin
-    tagIds?: number[] | null; // NEW: replace tags by ids
+    createMissingGenres?: boolean;
+    tagIds?: number[] | null;
   },
 ) {
-  // validate counts and existence BEFORE transaction when arrays are provided
   if (Array.isArray(updates.genreIds) && updates.genreIds.length > MAX_GENRES) {
     throw { code: 'INVALID_PAYLOAD', message: `Max ${MAX_GENRES} genres allowed` };
   }
@@ -265,7 +223,7 @@ export async function updateNovel(
       select: { id: true },
     });
     const existingIds = new Set(existing.map((g) => g.id));
-    const missing = updates.genreIds.filter((id) => !existingIds.has(id));
+    const missing = updates.genreIds.filter((gid) => !existingIds.has(gid));
     if (missing.length > 0) {
       throw { code: 'INVALID_PAYLOAD', message: `Invalid genreIds: ${missing.join(',')}` };
     }
@@ -277,7 +235,7 @@ export async function updateNovel(
       select: { id: true },
     });
     const existingIds = new Set(existing.map((t) => t.id));
-    const missing = updates.tagIds.filter((id) => !existingIds.has(id));
+    const missing = updates.tagIds.filter((tid) => !existingIds.has(tid));
     if (missing.length > 0) {
       throw { code: 'INVALID_PAYLOAD', message: `Invalid tagIds: ${missing.join(',')}` };
     }
@@ -293,24 +251,28 @@ export async function updateNovel(
       },
     });
 
-    // replace genres by ids if provided
+    // Оновлення жанрів по ID
     if (Array.isArray(updates.genreIds)) {
       await tx.novelGenre.deleteMany({ where: { novelId: id } });
-      for (const gid of updates.genreIds) {
-        if (!Number.isInteger(gid) || gid <= 0) continue;
-        try {
-          await tx.novelGenre.create({ data: { novelId: id, genreId: gid } });
-        } catch (e) {}
+
+      const validGenreIds = updates.genreIds.filter((gid) => Number.isInteger(gid) && gid > 0);
+      if (validGenreIds.length > 0) {
+        const genreData = validGenreIds.map((gid) => ({ novelId: id, genreId: gid }));
+        await tx.novelGenre.createMany({
+          data: genreData,
+          skipDuplicates: true,
+        });
       }
     }
 
-    // replace genres by names if provided (keeps previous behavior)
+    // Оновлення жанрів по імені
     if (Array.isArray(updates.genreNames)) {
       await tx.novelGenre.deleteMany({ where: { novelId: id } });
       for (const raw of updates.genreNames) {
         const name = String(raw).trim();
         if (!name) continue;
         const existing = await tx.genre.findUnique({ where: { name } });
+
         if (existing) {
           try {
             await tx.novelGenre.create({ data: { novelId: id, genreId: existing.id } });
@@ -324,14 +286,17 @@ export async function updateNovel(
       }
     }
 
-    // replace tags by ids if provided
+    // ВИПРАВЛЕНО: Оновлення тегів по ID (помилка з data.tagIds та created.id)
     if (Array.isArray(updates.tagIds)) {
       await tx.novelTag.deleteMany({ where: { novelId: id } });
-      for (const tid of updates.tagIds) {
-        if (!Number.isInteger(tid) || tid <= 0) continue;
-        try {
-          await tx.novelTag.create({ data: { novelId: id, tagId: tid } });
-        } catch (e) {}
+
+      const validTagIds = updates.tagIds.filter((tid) => Number.isInteger(tid) && tid > 0);
+      if (validTagIds.length > 0) {
+        const tagData = validTagIds.map((tid) => ({ novelId: id, tagId: tid }));
+        await tx.novelTag.createMany({
+          data: tagData,
+          skipDuplicates: true,
+        });
       }
     }
 
@@ -340,28 +305,17 @@ export async function updateNovel(
 }
 
 export async function deleteNovel(id: number) {
+  // Прибрано try/catch. Якщо видалення пов'язаних сутностей падає,
+  // вся транзакція має автоматично скасуватися (Rollback), щоб не псувати базу.
   return prisma.$transaction(async (tx) => {
-    try {
-      await tx.viewHistory.deleteMany({ where: { novelId: id } });
-    } catch (e) {}
-    try {
-      await tx.chapter.deleteMany({ where: { novelId: id } });
-    } catch (e) {}
-    try {
-      await tx.comment.deleteMany({ where: { novelId: id } });
-    } catch (e) {}
-    try {
-      await tx.rating.deleteMany({ where: { novelId: id } });
-    } catch (e) {}
-    try {
-      await tx.novelTag.deleteMany({ where: { novelId: id } });
-    } catch (e) {}
-    try {
-      await tx.novelGenre.deleteMany({ where: { novelId: id } });
-    } catch (e) {}
-    try {
-      await tx.follow.deleteMany({ where: { novelId: id } });
-    } catch (e) {}
+    await tx.viewHistory.deleteMany({ where: { novelId: id } });
+    await tx.chapter.deleteMany({ where: { novelId: id } });
+    await tx.comment.deleteMany({ where: { novelId: id } });
+    await tx.rating.deleteMany({ where: { novelId: id } });
+    await tx.novelTag.deleteMany({ where: { novelId: id } });
+    await tx.novelGenre.deleteMany({ where: { novelId: id } });
+    await tx.follow.deleteMany({ where: { novelId: id } });
+
     const deleted = await tx.novel.delete({ where: { id } });
     return deleted;
   });

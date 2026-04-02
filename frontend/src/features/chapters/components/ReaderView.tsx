@@ -6,6 +6,7 @@ import { useChapter } from '../hooks/useChapter';
 import { useReaderStore } from '@/store/useReaderStore';
 import { ReaderSettings } from './ReaderSettings';
 import { CommentSection } from '@/features/comments/components/CommentSection';
+import DOMPurify from 'isomorphic-dompurify';
 
 interface ReaderViewProps {
   novelId: string;
@@ -52,6 +53,8 @@ export const ReaderView = ({ novelId, chapterId }: ReaderViewProps) => {
 
   // Чекаємо на монтування клієнта, щоб застосувати збережену тему (уникаємо моргання)
   const activeThemeClass = mounted ? themeClasses[theme] : themeClasses.light;
+  const prevChapterId = chapter?.prevChapterId;
+  const nextChapterId = chapter?.nextChapterId;
 
   return (
     <div className={`min-h-screen pb-20 transition-colors duration-300 ${activeThemeClass}`}>
@@ -74,24 +77,36 @@ export const ReaderView = ({ novelId, chapterId }: ReaderViewProps) => {
             Розділ {chapter.order}: {chapter.title}
           </h1>
 
-          {/* Контент розділу.
-              Використовуємо dangerouslySetInnerHTML, оскільки контент генерується TipTap редактором.
-              (Стилі шрифту застосовуються інлайн) */}
           <div
             className="prose prose-lg max-w-none prose-headings:font-bold reader-content leading-relaxed"
             style={{ fontSize: mounted ? `${fontSize}px` : '18px' }}
-            dangerouslySetInnerHTML={{ __html: chapter.content }}
+            dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(chapter.content) }}
           />
         </article>
 
-        {/* Навігація між розділами (Заглушка для майбутнього розвитку) */}
+        {/* Робоча навігація між розділами */}
         <div className="mt-16 pt-8 border-t border-gray-200/20 flex justify-between items-center">
-          <button className="px-6 py-2 rounded bg-black/5 hover:bg-black/10 dark:bg-white/5 dark:hover:bg-white/10 transition">
-            Попередній
-          </button>
-          <button className="px-6 py-2 rounded bg-black/5 hover:bg-black/10 dark:bg-white/5 dark:hover:bg-white/10 transition">
-            Наступний
-          </button>
+          {prevChapterId ? (
+            <Link
+              href={`/novels/${novelId}/chapters/${prevChapterId}`}
+              className="px-6 py-2 rounded bg-black/5 hover:bg-black/10 dark:bg-white/5 dark:hover:bg-white/10 transition"
+            >
+              &larr; Попередній
+            </Link>
+          ) : (
+            <div /> // Порожній блок для правильного вирівнювання через justify-between
+          )}
+
+          {nextChapterId ? (
+            <Link
+              href={`/novels/${novelId}/chapters/${nextChapterId}`}
+              className="px-6 py-2 bg-indigo-600 text-white hover:bg-indigo-700 transition"
+            >
+              Наступний &rarr;
+            </Link>
+          ) : (
+            <span className="text-gray-400 italic">Це останній розділ</span>
+          )}
         </div>
 
         <CommentSection chapterId={chapterId} />
