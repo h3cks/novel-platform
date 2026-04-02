@@ -7,11 +7,11 @@ interface ProfileHeaderProps {
 }
 
 export const ProfileHeader = ({ profile }: ProfileHeaderProps) => {
-  const avatarImage = profile.avatarUrl || 'https://api.dicebear.com/7.x/avataaars/svg?seed=' + profile.username;
+  const avatarLetter = profile?.username ? profile.username.charAt(0).toUpperCase() : '?';
 
-  const formattedDate = new Date(profile.createdAt).toLocaleDateString('uk-UA', {
-    year: 'numeric', month: 'long', day: 'numeric',
-  });
+  const formattedDate = profile?.createdAt
+    ? new Date(profile.createdAt).toLocaleDateString('uk-UA', { year: 'numeric', month: 'long' })
+    : '...';
 
   const roleLabels: Record<string, { label: string, bg: string }> = {
     READER: { label: 'Читач', bg: 'bg-slate-100 text-slate-700' },
@@ -22,14 +22,15 @@ export const ProfileHeader = ({ profile }: ProfileHeaderProps) => {
 
   const userRole = roleLabels[profile.role] || roleLabels.READER;
 
-  return (
+
+    return (
     <div className="bg-white rounded-3xl shadow-sm border border-slate-100 p-8 md:p-12 relative overflow-hidden">
       {/* Декоративний фон */}
       <div className="absolute top-0 left-0 w-full h-32 bg-gradient-to-r from-primary-50 to-indigo-50"></div>
 
       <div className="relative z-10 flex flex-col md:flex-row items-center md:items-start gap-8">
         <div className="w-32 h-32 md:w-40 md:h-40 shrink-0 rounded-full overflow-hidden border-4 border-white shadow-xl bg-slate-50">
-          <img src={avatarImage} alt={profile.username} className="w-full h-full object-cover" />
+          <img src={avatarLetter} alt={profile.username} className="w-full h-full object-cover" />
         </div>
 
         <div className="flex-1 text-center md:text-left pt-2">
