@@ -24,7 +24,7 @@ router.post('/request-password-reset', softRateLimiter, authCtrl.requestPassword
 router.post('/reset-password', authCtrl.resetPassword);
 
 // Protected
-router.get('/me', authMiddleware, authCtrl.me);
+router.get('/me', authMiddleware, authCtrl.getMe);
 router.post('/change-password', authMiddleware, authCtrl.changePassword);
 
 export default router;

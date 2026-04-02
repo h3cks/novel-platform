@@ -3,6 +3,7 @@ import * as authService from '../services/auth.service';
 import { isEmail, isPasswordValid, isUsernameValid } from '../utils/validators';
 import { ok, fail } from '../utils/response';
 import { asyncHandler } from '../middlewares/asyncHandler';
+import prisma from '../prisma/client';
 
 export const register = asyncHandler(async (req: Request, res: Response) => {
   const { username, email, password } = req.body;
@@ -98,11 +99,38 @@ export const login = asyncHandler(async (req: Request, res: Response) => {
   }
 });
 
-export const me = asyncHandler(async (req: Request, res: Response) => {
-  const user = (req as any).user;
-  if (!user) return fail(res, 401, 'UNAUTHORIZED', 'Unauthorized');
-  return ok(res, { user });
-});
+// Додаємо відсутній контролер getMe
+export const getMe = async (req: Request, res: Response): Promise<void> => {
+  try {
+    // Безпечно дістаємо ID користувача
+    const userId = req.userId || (req.user && req.user.id);
+
+    if (!userId) {
+      // Використовуємо fail() правильно (передаємо res, статус та повідомлення)
+      fail(res, 401, 'Не знайдено ID користувача у запиті');
+      return;
+    }
+
+    // Шукаємо користувача в базі
+    const user = await prisma.user.findUnique({
+      where: { id: Number(userId) },
+    });
+
+    if (!user) {
+      fail(res, 404, 'Користувача не знайдено');
+      return;
+    }
+
+    // Видаляємо пароль з об'єкта перед відправкою на фронтенд
+    const { password, ...safeUser } = user;
+
+    // Використовуємо ok() правильно (передаємо res та дані)
+    ok(res, { user: safeUser });
+  } catch (error) {
+    console.error('🔥 Помилка в контролері getMe:', error);
+    fail(res, 500, 'Внутрішня помилка при завантаженні профілю');
+  }
+};
 
 export const changePassword = asyncHandler(async (req: Request, res: Response) => {
   const user = (req as any).user;
