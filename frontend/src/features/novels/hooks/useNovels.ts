@@ -2,10 +2,13 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { novelsService } from '../api/novels.service';
 import { Novel } from '../types';
 
-export const useNovels = () => {
+// ДОДАНО: params?: Record<string, any>
+export const useNovels = (params?: Record<string, any>) => {
   return useQuery({
-    queryKey: ['novels'],
-    queryFn: novelsService.getNovels,
+    // ДОДАНО: params у queryKey для коректного кешування
+    queryKey: ['novels', params],
+    // ДОДАНО: передаємо params у сервіс
+    queryFn: () => novelsService.getNovels(params),
   });
 };
 

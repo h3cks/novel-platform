@@ -130,15 +130,19 @@ export const Navbar = () => {
                   </Link>
                 </div>
 
-                {/* Секція створення (Тільки для Авторів/Адмінів) */}
-                {(user?.role === 'AUTHOR' || user?.role === 'ADMIN') && (
-                  <div className="py-2 border-t border-slate-100">
-                    <Link href="/studio/novels/create" onClick={handleLinkClick} className="flex items-center gap-3 px-4 py-2.5 text-sm font-bold text-indigo-600 hover:bg-indigo-50 transition-colors">
-                      <svg className="w-5 h-5 opacity-80" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
-                      Створення новели
-                    </Link>
-                  </div>
-                )}
+                {/* Студія (Доступно всім авторизованим) */}
+                <div className="py-2 border-t border-slate-100">
+                  <Link
+                    href="/studio"
+                    onClick={handleLinkClick}
+                    className="flex items-center gap-3 px-4 py-2.5 text-sm font-bold text-indigo-600 hover:bg-indigo-50 transition-colors"
+                  >
+                    <svg className="w-5 h-5 opacity-80" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                    </svg>
+                    {user?.role === 'READER' ? 'Стати автором' : 'Студія Автора'}
+                  </Link>
+                </div>
 
                 {/* Вихід */}
                 <div className="py-2 border-t border-slate-100">
