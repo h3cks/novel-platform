@@ -71,12 +71,12 @@ export const ImageUpload = ({
     <div className="w-full">
       <div
         onClick={handleClick}
-        className={`group relative flex flex-col items-center justify-center border-2 border-dashed cursor-pointer transition-all overflow-hidden
-          ${shapeClasses}
-          ${error ? 'border-red-400 bg-red-50' : 'border-gray-300 hover:border-blue-500 bg-gray-50'}
-          ${disabled || isUploading ? 'opacity-50 cursor-not-allowed' : ''}
-          ${className}
-        `}
+        className={`group relative flex flex-col items-center justify-center border-2 border-dashed cursor-pointer transition-all overflow-hidden flex items-center justify-center
+        ${shapeClasses}
+        ${error ? 'border-red-400 bg-red-50' : 'border-gray-300 hover:border-blue-500 bg-gray-50'}
+        ${disabled || isUploading ? 'opacity-50 cursor-not-allowed' : ''}
+        ${className}
+      `}
       >
         <input
           type="file"
@@ -97,7 +97,7 @@ export const ImageUpload = ({
           </div>
         ) : value ? (
           <>
-            <img src={value} alt="Preview" className="w-full h-full object-cover" />
+            <img src={value} alt="Preview" className="h-full w-full object-contain" />
 
             {/* Оверлей при наведенні для зміни зображення */}
             <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">

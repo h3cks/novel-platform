@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import { AuthorNovelList } from '@/features/studio/components/AuthorNovelList'; // ДОДАНО ІМПОРТ
 
 export const metadata: Metadata = {
   title: 'Студія Автора | NovelHub',
@@ -16,24 +17,13 @@ export default function StudioDashboard() {
 
         <Link
           href="/studio/novels/create"
-          className="bg-blue-600 text-white px-5 py-2.5 rounded-md font-medium hover:bg-blue-700 transition-colors shadow-sm"
+          className="bg-indigo-600 text-white px-5 py-2.5 rounded-md font-medium hover:bg-indigo-700 transition-colors shadow-sm shrink-0"
         >
           + Створити новелу
         </Link>
       </div>
 
-      <div className="bg-white border border-gray-200 rounded-lg p-12 text-center shadow-sm">
-        <div className="w-16 h-16 bg-blue-50 text-blue-500 rounded-full flex items-center justify-center mx-auto mb-4">
-          <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-          </svg>
-        </div>
-        <h3 className="text-lg font-medium text-gray-900 mb-2">У вас ще немає творів</h3>
-        <p className="text-gray-500 mb-6 max-w-md mx-auto">
-          Почніть свою письменницьку подорож прямо зараз. Створіть першу новелу, додайте розділи та поділіться нею з читачами.
-        </p>
-        {/* У майбутньому тут буде рендеритись <AuthorNovelList /> замість цієї заглушки */}
-      </div>
+      <AuthorNovelList />
     </div>
   );
 }
