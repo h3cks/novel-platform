@@ -1,7 +1,7 @@
 // backend/src/services/novel.service.ts
 import prisma from '../prisma/client';
 
-const MAX_GENRES = 3;
+const MAX_GENRES = 5;
 const MAX_TAGS = 20;
 
 function toSlug(s: string) {

@@ -15,7 +15,7 @@ export const novelSchema = z.object({
   genreIds: z
     .array(z.number())
     .min(1, 'Оберіть хоча б 1 жанр')
-    .max(3, 'Можна обрати максимум 3 жанри'),
+    .max(5, 'Можна обрати максимум 3 жанри'),
   tagIds: z
     .array(z.number())
     .max(20, 'Можна обрати максимум 20 тегів')

@@ -5,39 +5,36 @@ import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { novelSchema, NovelFormValues } from '../schemas/novel.schema';
 import { useCreateNovel } from '../hooks/useCreateNovel';
+import { useUpdateNovel } from '../hooks/useUpdateNovel'; // ДОДАНО
 import Link from 'next/link';
 import { ImageUpload } from '@/components/ui/ImageUpload';
 import { GenreSelector } from '@/components/ui/GenreSelector';
 import { TagAutocomplete } from '@/components/ui/TagAutocomplete';
 import { apiClient } from '@/lib/axios';
 
-export const NovelForm = () => {
-  const { mutate: createNovel, isPending, error } = useCreateNovel();
+// ДОДАНО ПРОПСИ ДЛЯ РЕДАГУВАННЯ
+interface NovelFormProps {
+  initialData?: any;
+  novelId?: string;
+}
 
-  // Стан для завантаження доступних жанрів з бекенду
+export const NovelForm = ({ initialData, novelId }: NovelFormProps) => {
+  const { mutate: createNovel, isPending: isCreating, error: createError } = useCreateNovel();
+  const { mutate: updateNovel, isPending: isUpdating, error: updateError } = useUpdateNovel();
+
+  const isPending = isCreating || isUpdating;
+  const error = createError || updateError;
+  const isEditing = !!initialData && !!novelId;
+
   const [availableGenres, setAvailableGenres] = useState<{id: number, name: string}[]>([]);
-  // Стан для відображення назв обраних тегів (бо форма зберігає лише ID)
   const [selectedTagObjects, setSelectedTagObjects] = useState<{id: number, name: string}[]>([]);
-
-  useEffect(() => {
-    // Додано правильний шлях: /meta/genres
-    apiClient.get('/meta/genres')
-      .then((res) => {
-        // Увага: переконайся, що структура відповіді саме res.data.data.items
-        // Якщо твоя утиліта ok() на бекенді повертає просто { items: [...] },
-        // то тут має бути res.data.items
-        setAvailableGenres(res.data.data?.items || res.data.items || []);
-      })
-      .catch((err) => {
-        console.error("Помилка завантаження жанрів:", err);
-      });
-  }, []);
 
   const {
     register,
     handleSubmit,
     control,
     setValue,
+    reset,
     formState: { errors },
   } = useForm<NovelFormValues>({
     resolver: zodResolver(novelSchema),
@@ -50,22 +47,60 @@ export const NovelForm = () => {
     }
   });
 
-  // Синхронізація об'єктів тегів з формою
+  // Завантаження жанрів
+  useEffect(() => {
+    apiClient.get('/meta/genres').then((res) => {
+      setAvailableGenres(res.data.data?.items || res.data.items || []);
+    }).catch(console.error);
+  }, []);
+
+  useEffect(() => {
+    if (initialData) {
+      reset({
+        title: initialData.title || '',
+        description: initialData.description || '',
+        coverUrl: initialData.coverUrl || '',
+
+        genreIds: initialData.genres?.map((item: any) => item.genre.id) || [],
+        tagIds: initialData.tags?.map((item: any) => item.tag.id) || [],
+      });
+
+
+      if (initialData.tags) {
+        setSelectedTagObjects(initialData.tags.map((item: any) => item.tag));
+      }
+    }
+  }, [initialData, reset]);
+
   const handleTagsChange = (tags: {id: number, name: string}[]) => {
     setSelectedTagObjects(tags);
     setValue('tagIds', tags.map(t => t.id), { shouldValidate: true });
   };
 
   const onSubmit = (data: NovelFormValues) => {
-    createNovel(data);
+    if (isEditing) {
+      updateNovel({ id: novelId, data });
+    } else {
+      createNovel(data);
+    }
   };
 
   const apiError = error as any;
-  const errorMessage = apiError?.response?.data?.message || 'Сталася помилка при збереженні.';
+  // Тепер ми витягуємо точну причину з бекенду або показуємо деталі Axios
+  const errorMessage =
+    apiError?.response?.data?.message ||
+    apiError?.response?.data?.error?.message ||
+    apiError?.message ||
+    'Сталася помилка при збереженні.';
+
+  // Виводимо в консоль для легкого дебагу, якщо раптом знову зламається
+  if (apiError) console.error("Деталі помилки API:", apiError?.response?.data);
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="max-w-4xl mx-auto bg-white p-6 md:p-8 rounded-2xl shadow-sm border border-gray-100">
-      <h2 className="text-2xl font-extrabold text-gray-900 mb-8 border-b border-gray-100 pb-4">Створення нової новели</h2>
+      <h2 className="text-2xl font-extrabold text-gray-900 mb-8 border-b border-gray-100 pb-4">
+        {isEditing ? 'Редагування новели' : 'Створення нової новели'}
+      </h2>
 
       {error && (
         <div className="mb-6 p-4 bg-red-50 text-red-600 rounded-xl text-sm border border-red-100 font-medium">
@@ -102,7 +137,7 @@ export const NovelForm = () => {
           {/* Жанри (Multi-select Pills) */}
           <div>
             <label className="block text-sm font-bold text-gray-700 mb-3">
-              Жанри (від 1 до 3) *
+              Жанри (від 1 до 5) *
             </label>
             <Controller
               name="genreIds"
@@ -110,9 +145,11 @@ export const NovelForm = () => {
               render={({ field: { onChange, value } }) => (
                 <GenreSelector
                   genres={availableGenres}
-                  selectedIds={value}
-                  onChange={onChange}
-                  max={3}
+                  selectedIds={value || []} // Гарантуємо, що це завжди масив
+                  onChange={(ids) => {
+                    onChange(ids); // Передаємо зміни назад у форму
+                  }}
+                  max={5}
                   disabled={isPending || availableGenres.length === 0}
                 />
               )}
@@ -148,9 +185,9 @@ export const NovelForm = () => {
       </div>
 
       <div className="flex justify-end gap-3 mt-8 pt-6 border-t border-gray-100">
-        <Link href="/studio" className="px-6 py-2.5 text-slate-600 font-bold hover:bg-slate-50 rounded-xl">Скасувати</Link>
+        <Link href={isEditing ? `/studio/novels/${novelId}` : "/studio"} className="px-6 py-2.5 text-slate-600 font-bold hover:bg-slate-50 rounded-xl">Скасувати</Link>
         <button type="submit" disabled={isPending} className="bg-indigo-600 text-white px-8 py-2.5 rounded-xl font-bold hover:bg-indigo-700 disabled:opacity-50">
-          Створити
+          {isEditing ? 'Зберегти зміни' : 'Створити'}
         </button>
       </div>
     </form>
