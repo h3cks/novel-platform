@@ -62,9 +62,9 @@ async function getTransporter() {
 }
 
 export async function sendConfirmationEmail(to: string, token: string) {
-  const confirmUrl = `${
-    process.env.API_URL ?? 'http://localhost:4000'
-  }/auth/confirm?token=${encodeURIComponent(token)}`;
+  const frontend = process.env.FRONTEND_URL ?? 'http://localhost:3000';
+  const confirmUrl = `${frontend}/auth/confirm?token=${encodeURIComponent(token)}`;
+
   const html = `
     <p>Доброго дня!</p>
     <p>Натисніть посилання, щоб підтвердити ваш email:</p>

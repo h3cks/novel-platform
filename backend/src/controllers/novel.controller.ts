@@ -6,7 +6,7 @@ import * as publishService from '../services/publish.service';
 import { ok, fail } from '../utils/response';
 import { asyncHandler } from '../middlewares/asyncHandler';
 
-const MAX_GENRES = 3;
+const MAX_GENRES = 5;
 const MAX_TAGS = 20;
 
 function validateTitle(title: any) {
