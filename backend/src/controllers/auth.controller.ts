@@ -49,7 +49,6 @@ export const register = asyncHandler(async (req: Request, res: Response) => {
         'Failed to send confirmation email, try again later',
       );
     }
-    // unexpected -> go to global errorHandler
     throw err;
   }
 });
@@ -71,7 +70,6 @@ export const resendConfirmation = asyncHandler(async (req: Request, res: Respons
     await authService.resendConfirmation(email);
     return ok(res, { ok: true });
   } catch (err: any) {
-    // keep generic to avoid leaking info
     return fail(res, 500, 'RESEND_FAILED', 'Unable to resend confirmation');
   }
 });
@@ -90,6 +88,15 @@ export const login = asyncHandler(async (req: Request, res: Response) => {
 
   try {
     const { token, user } = await authService.login(id, password);
+
+    // Встановлюємо HttpOnly cookie для middleware
+    res.cookie('token', token, {
+      httpOnly: true, // Забороняє доступ з JS (захист від XSS)
+      secure: process.env.NODE_ENV === 'production', // Працює тільки через HTTPS у продакшені
+      sameSite: 'lax', // Дозволяє передавати куку при переходах
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 днів (повинно збігатися з терміном дії JWT)
+    });
+
     return ok(res, { token, user });
   } catch (err: any) {
     if (err.code === 'INVALID_CREDENTIALS') {
@@ -99,36 +106,41 @@ export const login = asyncHandler(async (req: Request, res: Response) => {
   }
 });
 
-// Додаємо відсутній контролер getMe
+// Новий контролер для безпечного виходу
+export const logout = asyncHandler(async (req: Request, res: Response) => {
+  res.clearCookie('token', {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax',
+  });
+  return ok(res, { ok: true, message: 'Вихід успішний' });
+});
+
 export const getMe = async (req: Request, res: Response): Promise<void> => {
   try {
-    // Безпечно дістаємо ID користувача
     const userId = req.userId || (req.user && req.user.id);
 
     if (!userId) {
-      // Використовуємо fail() правильно (передаємо res, статус та повідомлення)
-      fail(res, 401, 'Не знайдено ID користувача у запиті');
+      // Виправлено сигнатуру fail (додано код помилки 'UNAUTHORIZED')
+      fail(res, 401, 'UNAUTHORIZED', 'Не знайдено ID користувача у запиті');
       return;
     }
 
-    // Шукаємо користувача в базі
     const user = await prisma.user.findUnique({
       where: { id: Number(userId) },
     });
 
     if (!user) {
-      fail(res, 404, 'Користувача не знайдено');
+      fail(res, 404, 'NOT_FOUND', 'Користувача не знайдено');
       return;
     }
 
-    // Видаляємо пароль з об'єкта перед відправкою на фронтенд
     const { password, ...safeUser } = user;
 
-    // Використовуємо ok() правильно (передаємо res та дані)
     ok(res, { user: safeUser });
   } catch (error) {
     console.error('🔥 Помилка в контролері getMe:', error);
-    fail(res, 500, 'Внутрішня помилка при завантаженні профілю');
+    fail(res, 500, 'SERVER_ERROR', 'Внутрішня помилка при завантаженні профілю');
   }
 };
 

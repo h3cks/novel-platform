@@ -1,3 +1,4 @@
+// src/lib/axios.ts
 import axios from 'axios';
 import { useAuthStore } from '@/features/auth/store/useAuthStore';
 
@@ -8,12 +9,10 @@ export const apiClient = axios.create({
   },
 });
 
-// Використовуємо Zustand getState() замість ручного парсингу localStorage
 apiClient.interceptors.request.use(
   (config) => {
     const token = useAuthStore.getState().token;
     if (token) {
-      config.headers = config.headers || {};
       config.headers.Authorization = `Bearer ${token}`;
     }
     return config;
@@ -21,12 +20,17 @@ apiClient.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-// Прибираємо window.location.href. Просто чистимо стейт.
 apiClient.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
+      // Тут в ідеалі має бути логіка оновлення токена (Refresh Token)
+      // Якщо рефреш не вдався - робимо повний логаут
       useAuthStore.getState().logout();
+      // Очищення кешу викличеться на стороні UI, або через window.location
+      if (typeof window !== 'undefined') {
+        window.location.href = '/auth/login'; // Надійний редирект при "смерті" сесії
+      }
     }
     return Promise.reject(error);
   }
