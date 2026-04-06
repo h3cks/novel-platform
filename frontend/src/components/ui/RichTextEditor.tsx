@@ -14,12 +14,14 @@ export const RichTextEditor = ({ content, onChange, disabled = false }: RichText
     extensions: [StarterKit],
     content: content,
     editable: !disabled,
+    immediatelyRender: false,
     onUpdate: ({ editor }) => {
       onChange(editor.getHTML());
     },
     editorProps: {
       attributes: {
-        class: 'prose prose-lg max-w-none focus:outline-none min-h-[400px] p-6 bg-white',
+        // ЗМІНЕНО ТУТ: Прибрали `prose-lg`, додали `prose-p:my-2` (менші відступи) та інші налаштування для компактності
+        class: 'prose max-w-none focus:outline-none min-h-[400px] p-6 bg-white prose-p:my-2 prose-headings:mt-4 prose-headings:mb-2 prose-blockquote:my-2 prose-blockquote:py-1',
       },
     },
   });
@@ -28,7 +30,6 @@ export const RichTextEditor = ({ content, onChange, disabled = false }: RichText
     return <div className="min-h-[400px] bg-gray-50 border border-gray-200 rounded-md animate-pulse"></div>;
   }
 
-  // Кнопки панелі інструментів
   const ToolbarButton = ({
                            onClick,
                            isActive,
@@ -53,38 +54,28 @@ export const RichTextEditor = ({ content, onChange, disabled = false }: RichText
   );
 
   return (
-    <div className={`border border-gray-300 rounded-lg overflow-hidden flex flex-col ${disabled ? 'opacity-70' : ''}`}>
-      {/* Панель інструментів */}
+    // ЗМІНЕНО ТУТ: Додано focus-within для красивої синьої рамки, коли редактор активний
+    <div className={`border border-gray-300 rounded-lg overflow-hidden flex flex-col focus-within:ring-2 focus-within:ring-blue-500 transition-shadow ${disabled ? 'opacity-70' : ''}`}>
+
+      {/* Панель інструментів (завжди залишається зверху) */}
       <div className="flex flex-wrap items-center gap-1 p-2 bg-gray-50 border-b border-gray-300">
-        <ToolbarButton
-          onClick={() => editor.chain().focus().toggleBold().run()}
-          isActive={editor.isActive('bold')}
-        >
+        <ToolbarButton onClick={() => editor.chain().focus().toggleBold().run()} isActive={editor.isActive('bold')}>
           Жирний
         </ToolbarButton>
-        <ToolbarButton
-          onClick={() => editor.chain().focus().toggleItalic().run()}
-          isActive={editor.isActive('italic')}
-        >
+        <ToolbarButton onClick={() => editor.chain().focus().toggleItalic().run()} isActive={editor.isActive('italic')}>
           Курсив
         </ToolbarButton>
         <div className="w-px h-6 bg-gray-300 mx-1"></div>
-        <ToolbarButton
-          onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
-          isActive={editor.isActive('heading', { level: 2 })}
-        >
+        <ToolbarButton onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()} isActive={editor.isActive('heading', { level: 2 })}>
           Заголовок
         </ToolbarButton>
-        <ToolbarButton
-          onClick={() => editor.chain().focus().toggleBlockquote().run()}
-          isActive={editor.isActive('blockquote')}
-        >
+        <ToolbarButton onClick={() => editor.chain().focus().toggleBlockquote().run()} isActive={editor.isActive('blockquote')}>
           Цитата
         </ToolbarButton>
       </div>
 
       {/* Зона редагування */}
-      <div className="flex-grow cursor-text bg-white" onClick={() => editor.commands.focus()}>
+      <div className="flex-grow cursor-text bg-white overflow-y-auto max-h-[60vh]" onClick={() => editor.commands.focus()}>
         <EditorContent editor={editor} />
       </div>
     </div>

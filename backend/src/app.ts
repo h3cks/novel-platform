@@ -27,7 +27,7 @@ const apiRouter = express.Router();
 apiRouter.use('/auth', authRoutes);
 apiRouter.use('/profile', profileRoutes);
 apiRouter.use('/novels', novelRoutes);
-apiRouter.use('/chapters', chapterRoutes);
+apiRouter.use('/', chapterRoutes);
 apiRouter.use('/comments', commentRoutes);
 apiRouter.use('/reports', reportsRouter);
 apiRouter.use('/meta', metaRouter);
