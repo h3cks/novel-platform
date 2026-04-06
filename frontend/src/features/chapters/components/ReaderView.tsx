@@ -6,7 +6,7 @@ import { useChapter } from '../hooks/useChapter';
 import { useReaderStore } from '@/store/useReaderStore';
 import { ReaderSettings } from './ReaderSettings';
 import { CommentSection } from '@/features/comments/components/CommentSection';
-import DOMPurify from 'isomorphic-dompurify';
+import DOMPurify from 'dompurify';
 
 interface ReaderViewProps {
   novelId: string;
@@ -56,6 +56,10 @@ export const ReaderView = ({ novelId, chapterId }: ReaderViewProps) => {
   const prevChapterId = chapter?.prevChapterId;
   const nextChapterId = chapter?.nextChapterId;
 
+  const sanitizedContent = typeof window !== 'undefined'
+    ? DOMPurify.sanitize(chapter.content)
+    : chapter.content;
+
   return (
     <div className={`min-h-screen pb-20 transition-colors duration-300 ${activeThemeClass}`}>
       <div className="max-w-3xl mx-auto px-4 sm:px-6 py-8">
@@ -80,7 +84,7 @@ export const ReaderView = ({ novelId, chapterId }: ReaderViewProps) => {
           <div
             className="prose prose-lg max-w-none prose-headings:font-bold reader-content leading-relaxed"
             style={{ fontSize: mounted ? `${fontSize}px` : '18px' }}
-            dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(chapter.content) }}
+            dangerouslySetInnerHTML={{ __html: sanitizedContent }}
           />
         </article>
 

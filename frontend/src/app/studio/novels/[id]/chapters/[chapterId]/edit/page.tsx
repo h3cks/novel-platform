@@ -7,8 +7,10 @@ import Link from 'next/link';
 
 export default function EditChapterPage({ params }: { params: { id: string; chapterId: string } }) {
   const { data: chapter, isLoading, error } = useQuery({
-    queryKey: ['chapter', params.chapterId],
-    queryFn: () => studioChaptersService.getChapterById(params.chapterId),
+    // Додано params.id до ключа кешування для уникнення конфліктів
+    queryKey: ['chapter', params.id, params.chapterId],
+    // Виправлено: передаємо обидва аргументи (novelId, chapterId)
+    queryFn: () => studioChaptersService.getChapterById(params.id, params.chapterId),
   });
 
   if (isLoading) return <div className="text-center mt-20 text-gray-500">Завантаження розділу...</div>;
