@@ -4,12 +4,15 @@ import Link from 'next/link';
 import { useAuthStore } from '@/features/auth/store/useAuthStore';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState, useRef } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
+import Image from 'next/image';
 
 export const Navbar = () => {
   const user = useAuthStore((state) => state.user);
   const token = useAuthStore((state) => state.token);
   const logout = useAuthStore((state) => state.logout);
   const router = useRouter();
+  const queryClient = useQueryClient();
 
   const [isMounted, setIsMounted] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -41,8 +44,11 @@ export const Navbar = () => {
   const handleLogout = () => {
     setIsMenuOpen(false);
     logout();
+    queryClient.clear();
     router.push('/auth/login');
   };
+
+
 
   // Закриваємо меню при кліку на лінк
   const handleLinkClick = () => {
@@ -80,7 +86,14 @@ export const Navbar = () => {
               >
                 <div className="w-10 h-10 rounded-full overflow-hidden bg-indigo-100 border-2 border-white shadow-sm flex items-center justify-center text-indigo-700 font-bold">
                   {user?.avatarUrl ? (
-                    <img src={user.avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
+                    <Image
+                      src={user.avatarUrl}
+                      alt="Avatar"
+                      width={40}
+                      height={40}
+                      className="w-full h-full object-cover"
+                      unoptimized={user.avatarUrl.includes('google')} // якщо це зовнішній URL без налаштувань
+                    />
                   ) : (
                     <span>{avatarLetter}</span>
                   )}

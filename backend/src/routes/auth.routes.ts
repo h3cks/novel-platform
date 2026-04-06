@@ -19,6 +19,7 @@ router.get('/confirm', authCtrl.confirmEmail);
 router.post('/resend-confirmation', softRateLimiter, authCtrl.resendConfirmation);
 
 router.post('/login', loginRateLimiter, authCtrl.login);
+router.post('/logout', authCtrl.logout);
 
 router.post('/request-password-reset', softRateLimiter, authCtrl.requestPasswordReset);
 router.post('/reset-password', authCtrl.resetPassword);

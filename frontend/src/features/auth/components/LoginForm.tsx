@@ -5,6 +5,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { loginSchema, LoginFormValues } from '../schemas/auth.schema';
 import { useLogin } from '../hooks/useLogin';
+import { isAxiosError } from 'axios';
 
 export const LoginForm = () => {
   const { mutate: login, isPending, error } = useLogin();
@@ -21,7 +22,11 @@ export const LoginForm = () => {
     login(data);
   };
 
-  const apiError = error as any;
+  const errorMessage = error
+    ? (isAxiosError(error)
+      ? error.response?.data?.message || 'Помилка сервера. Спробуйте пізніше.'
+      : 'Сталася невідома помилка')
+    : null;
 
   return (
     <div className="w-full max-w-md bg-white p-8 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100">
@@ -34,7 +39,12 @@ export const LoginForm = () => {
         {error && (
           <div className="p-4 bg-red-50 text-red-700 rounded-xl text-sm border border-red-100 flex items-center gap-3">
             <svg className="w-5 h-5 shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" /></svg>
-            {apiError?.response?.data?.message || 'Помилка входу. Перевірте ваші дані.'}
+            {errorMessage && (
+              <div className="p-4 bg-red-50 text-red-700 rounded-xl text-sm border border-red-100 flex items-center gap-3">
+                <svg className="w-5 h-5 shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" /></svg>
+                {errorMessage}
+              </div>
+            )}
           </div>
         )}
 
