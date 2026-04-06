@@ -8,8 +8,22 @@ export interface CreateChapterDTO {
 
 export const studioChaptersService = {
   createChapter: async (novelId: string, payload: CreateChapterDTO): Promise<Chapter> => {
-    // Відправляємо POST запит на створення розділу для конкретної новели
-    const { data } = await apiClient.post<Chapter>(`/novels/${novelId}/chapters`, payload);
-    return data;
+    const { data } = await apiClient.post<{ chapter: Chapter }>(`/novels/${novelId}/chapters`, payload);
+    return data.chapter;
+  },
+
+  getNovelChapters: async (novelId: string): Promise<Chapter[]> => {
+    const { data } = await apiClient.get(`/novels/${novelId}/chapters`);
+    return data.items || data.data?.items || [];
+  },
+
+  getChapterById: async (novelId: string, chapterId: string): Promise<Chapter> => {
+    const { data } = await apiClient.get<{ chapter: Chapter }>(`/novels/${novelId}/chapters/${chapterId}`);
+    return data.chapter;
+  },
+
+  updateChapter: async (novelId: string, chapterId: string, payload: Partial<CreateChapterDTO>): Promise<Chapter> => {
+    const { data } = await apiClient.patch<{ chapter: Chapter }>(`/novels/${novelId}/chapters/${chapterId}`, payload);
+    return data.chapter;
   },
 };
