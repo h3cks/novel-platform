@@ -4,28 +4,24 @@ import { useAuthStore } from '@/features/auth/store/useAuthStore';
 import { useNovels } from '@/features/novels/hooks/useNovels';
 import Link from 'next/link';
 
-export const AuthorNovelList = () => {
-  const user = useAuthStore((state) => state.user);
+export const AuthorNovelList = ({ novels }: { novels: any }) => {
+  // 1. ДОДАЄМО БЕЗПЕЧНЕ ВИТЯГНЕННЯ МАСИВУ:
+  const novelsArray = Array.isArray(novels)
+    ? novels
+    : novels?.items || novels?.data?.items || novels?.data || [];
 
-  // Передаємо authorId, щоб бекенд повернув тільки новели цього юзера (включаючи DRAFT)
-  const { data, isLoading, isError } = useNovels({ authorId: user?.id });
-
-  if (!user) return null;
-
-  if (isLoading) {
+  // 2. Перевіряємо, чи масив не порожній
+  if (!novelsArray || novelsArray.length === 0) {
     return (
-      <div className="animate-pulse flex flex-col gap-4 mt-4">
-        <div className="h-32 bg-gray-100 rounded-lg w-full"></div>
-        <div className="h-32 bg-gray-100 rounded-lg w-full"></div>
+      <div className="text-center py-10 bg-white rounded-lg border border-slate-200 mt-4">
+        <p className="text-slate-500 mb-4">У вас ще немає створених новел.</p>
+        <Link href="/studio/novels/create" className="text-indigo-600 font-semibold hover:underline">
+          Створити першу новелу &rarr;
+        </Link>
       </div>
     );
   }
 
-  if (isError) {
-    return <div className="text-red-500 mt-4 font-medium">Помилка завантаження новел. Спробуйте пізніше.</div>;
-  }
-
-  const novels = data || [];
 
   if (novels.length === 0) {
     return (
@@ -45,40 +41,33 @@ export const AuthorNovelList = () => {
 
   return (
     <div className="grid gap-4 mt-4">
-      {novels.map((novel: any) => (
+      {/* 3. ВИКОРИСТОВУЄМО novelsArray ЗАМІСТЬ novels */}
+      {novelsArray.map((novel: any) => (
         <div key={novel.id} className="bg-white border border-gray-200 rounded-lg p-5 shadow-sm flex flex-col sm:flex-row gap-5 items-start sm:items-center hover:shadow-md transition-shadow">
           {novel.coverUrl ? (
             <img src={novel.coverUrl} alt={novel.title} className="w-16 h-24 sm:w-20 sm:h-28 object-cover rounded-md shadow-sm shrink-0" />
           ) : (
-            <div className="w-16 h-24 sm:w-20 sm:h-28 bg-slate-100 rounded-md shadow-sm flex items-center justify-center text-slate-400 text-xs text-center shrink-0">
-              Немає<br/>обкладинки
+            <div className="w-16 h-24 sm:w-20 sm:h-28 bg-slate-100 rounded-md flex items-center justify-center text-slate-400 text-xs shrink-0">
+              Немає обкладинки
             </div>
           )}
 
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-3 mb-1">
-              <h3 className="text-lg font-bold text-gray-900 truncate">{novel.title}</h3>
-              <span className={`px-2 py-0.5 text-[10px] font-bold uppercase rounded-full tracking-wider ${
-                novel.status === 'PUBLISHED' ? 'bg-green-100 text-green-700' :
-                  novel.status === 'REVIEWING' ? 'bg-amber-100 text-amber-700' :
-                    'bg-slate-100 text-slate-600'
-              }`}>
-                {novel.status === 'PUBLISHED' ? 'Опубліковано' : novel.status === 'REVIEWING' ? 'Модерація' : 'Чернетка'}
-              </span>
+          <div className="flex-1">
+            <Link href={`/studio/novels/${novel.id}`} className="text-lg font-bold text-slate-900 hover:text-indigo-600 transition-colors line-clamp-1">
+              {novel.title}
+            </Link>
+            <p className="text-sm text-slate-500 mt-1 line-clamp-2">{novel.description || 'Опис відсутній...'}</p>
+            <div className="mt-3 flex gap-2">
+               <span className={`text-xs font-semibold px-2 py-1 rounded-full ${novel.status === 'PUBLISHED' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}`}>
+                 {novel.status === 'PUBLISHED' ? 'Опубліковано' : 'Чернетка'}
+               </span>
             </div>
-            <p className="text-sm text-gray-500 line-clamp-2 mb-4">
-              {novel.description || 'Опис відсутній. Додайте його, щоб залучити більше читачів.'}
-            </p>
+          </div>
 
-            <div className="flex flex-wrap gap-2 sm:gap-3">
-              {/* Ці роути ми будемо реалізовувати наступними */}
-              <Link href={`/studio/novels/${novel.id}/chapters`} className="text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 px-4 py-2 rounded-md transition-colors shadow-sm">
-                Розділи
-              </Link>
-              <Link href={`/studio/novels/${novel.id}/edit`} className="text-sm font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 px-4 py-2 rounded-md transition-colors">
-                Редагувати дані
-              </Link>
-            </div>
+          <div className="flex gap-3 sm:ml-auto w-full sm:w-auto mt-2 sm:mt-0">
+            <Link href={`/studio/novels/${novel.id}`} className="flex-1 sm:flex-none text-center px-4 py-2 bg-indigo-50 text-indigo-700 rounded-lg text-sm font-semibold hover:bg-indigo-100 transition-colors">
+              Управління
+            </Link>
           </div>
         </div>
       ))}

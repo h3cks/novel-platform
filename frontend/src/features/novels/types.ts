@@ -26,3 +26,14 @@ export interface UpdateNovelDTO {
   coverUrl?: string;
   status?: NovelStatus;
 }
+
+export interface LatestUpdate {
+  id: number; // ID глави або запису оновлення
+  novelId: number;
+  novelTitle: string;
+  chapterId: number;
+  chapterNumber: number;
+  chapterTitle: string;
+  authorUsername: string;
+  updatedAt: string;
+}

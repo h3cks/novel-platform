@@ -15,6 +15,8 @@ router.get('/:id', authOptional, novelCtrl.getNovel);
 
 router.post('/:id/publish', authMiddleware, novelCtrl.publishNovel);
 
+router.get('/latest-updates', authMiddleware, novelCtrl.getLatestUpdates);
+
 // edit & delete
 router.patch('/:id', authMiddleware, novelCtrl.updateNovel);
 router.delete('/:id', authMiddleware, novelCtrl.deleteNovel);

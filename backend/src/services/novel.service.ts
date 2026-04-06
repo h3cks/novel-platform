@@ -122,6 +122,7 @@ export type FindNovelsOptions = {
   genreId?: number | null;
   tagName?: string | null;
   tagId?: number | null;
+  sort?: string | null; // ДОДАНО: підтримка сортування
 };
 
 export async function findNovels(opts: FindNovelsOptions) {
@@ -157,7 +158,6 @@ export async function findNovels(opts: FindNovelsOptions) {
     }
   }
 
-  // Делегована фільтрація базі даних (виправлено витік пам'яті)
   if (opts.genreId) {
     where.genres = { some: { genreId: opts.genreId } };
   }
@@ -168,13 +168,26 @@ export async function findNovels(opts: FindNovelsOptions) {
     where.tags = { some: { tag: { name: opts.tagName } } };
   }
 
+  // ДОДАНО: Логіка сортування
+  let orderBy: any = { createdAt: 'desc' };
+
+  if (opts.sort === 'recommended') {
+    // Проста імітація рекомендацій (найвищий рейтинг або найбільше закладок).
+    // Для початку візьмемо сортування по ID (або замініть на rating, якщо є поле).
+    orderBy = { id: 'desc' };
+  } else if (opts.sort === 'views_week' || opts.sort === 'views_day') {
+    // В ідеалі тут має бути запит до таблиці аналітики,
+    // але для старту (щоб не ламати поточну БД) сортуємо за updatedAt
+    orderBy = { updatedAt: 'desc' };
+  }
+
   const [total, items] = await Promise.all([
     prisma.novel.count({ where }),
     prisma.novel.findMany({
       where,
       skip,
       take: limit,
-      orderBy: { createdAt: 'desc' },
+      orderBy, // ВИКОРИСТОВУЄМО ДИНАМІЧНЕ СОРТУВАННЯ
       include: {
         author: { select: { id: true, username: true, displayName: true, avatarUrl: true } },
         tags: { include: { tag: true } },
@@ -302,6 +315,39 @@ export async function updateNovel(
 
     return updated;
   });
+}
+
+export async function getLatestUpdates(limit: number = 15) {
+  // Знаходимо останні опубліковані глави
+  const latestChapters = await prisma.chapter.findMany({
+    where: {
+      novel: {
+        status: 'PUBLISHED' // Тільки для опублікованих новел
+      }
+    },
+    orderBy: { createdAt: 'desc' },
+    take: limit,
+    include: {
+      novel: {
+        select: {
+          id: true,
+          title: true,
+          author: { select: { username: true } }
+        }
+      }
+    }
+  });
+
+  return latestChapters.map(ch => ({
+    id: ch.id,
+    novelId: ch.novelId,
+    novelTitle: ch.novel.title,
+    chapterId: ch.id,
+    chapterNumber: ch.order, // Припускаючи, що поле називається order
+    chapterTitle: ch.title,
+    authorUsername: ch.novel.author.username,
+    updatedAt: ch.createdAt.toISOString()
+  }));
 }
 
 export async function deleteNovel(id: number) {

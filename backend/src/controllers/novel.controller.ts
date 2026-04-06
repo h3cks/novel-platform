@@ -141,6 +141,12 @@ export const getNovel = asyncHandler(async (req: Request, res: Response) => {
   return ok(res, { novel });
 });
 
+export const getLatestUpdates = asyncHandler(async (req: Request, res: Response) => {
+  const limit = req.query.limit ? Number(req.query.limit) : 15;
+  const updates = await novelService.getLatestUpdates(limit);
+  return ok(res, updates); // Повертаємо формат, який очікує фронтенд
+});
+
 export const publishNovel = asyncHandler(async (req: Request, res: Response) => {
   const id = Number(req.params.id);
   if (!Number.isInteger(id) || id <= 0) return fail(res, 400, 'INVALID_ID', 'Invalid id');

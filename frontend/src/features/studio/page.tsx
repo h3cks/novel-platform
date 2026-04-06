@@ -3,6 +3,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { novelsService } from '@/features/novels/api/novels.service';
 import { useAuthStore } from '@/features/auth/store/useAuthStore';
+import { Novel } from '@/features/novels/types';
 import Link from 'next/link';
 
 export default function StudioDashboard() {
@@ -48,7 +49,7 @@ export default function StudioDashboard() {
               </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 text-sm">
-              {myNovels?.map((novel) => (
+              {myNovels?.map((novel: Novel) => (
                 <tr key={novel.id} className="hover:bg-slate-50/50 transition-colors group">
                   <td className="p-5 font-bold text-slate-900">{novel.title}</td>
                   <td className="p-5">
