@@ -15,7 +15,7 @@
     "@tiptap/starter-kit": "latest",
     "axios": "^1.4.0",
     "clsx": "^1.2.1",
-    "isomorphic-dompurify": "^3.7.1",
+    "dompurify": "^3.3.3",
     "js-cookie": "^3.0.5",
     "next": "13.5.8",
     "react": "18.2.0",
@@ -26,6 +26,7 @@
   },
   "devDependencies": {
     "@tailwindcss/typography": "^0.5.19",
+    "@types/dompurify": "^3.0.5",
     "@types/js-cookie": "^3.0.6",
     "@types/node": "^20.5.1",
     "@types/react": "^18.2.21",
