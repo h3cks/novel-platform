@@ -4,7 +4,9 @@ const nextConfig = {
     remotePatterns: [
       {
         protocol: 'https',
-        hostname: '**', // Тимчасово дозволяємо всі домени (для MVP)
+        hostname: '*.googleusercontent.com', // Дозволяємо аватарки Google
+        port: '',
+        pathname: '/**',
       },
     ],
   },
