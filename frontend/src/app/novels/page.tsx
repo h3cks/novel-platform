@@ -13,6 +13,7 @@ export default function NovelsPage() {
         <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 sticky top-24">
           <h2 className="font-bold text-lg text-slate-900 mb-4">Фільтри</h2>
 
+
           <div className="space-y-6">
             <div>
               <h3 className="text-sm font-semibold text-slate-700 mb-3">Статус</h3>

@@ -1,11 +1,34 @@
 import { apiClient } from '@/lib/axios';
-import { Novel, CreateNovelDTO, UpdateNovelDTO } from '../types';
+import { Novel, CreateNovelDTO, UpdateNovelDTO, LatestUpdate, NovelStatus } from '../types';
 
 export const novelsService = {
-  getNovels: async (params?: Record<string, any>): Promise<Novel[]> => {
+  getNovels: async (params?: any) => {
     const { data } = await apiClient.get('/novels', { params });
-    return data.data; // Повертає масив новел
+    return data;
   },
+
+  // НОВІ МЕТОДИ ДЛЯ ГОЛОВНОЇ СТОРІНКИ:
+  getRecommended: async (): Promise<Novel[]> => {
+    const { data } = await apiClient.get('/novels?sort=recommended&limit=15');
+    return data.data?.items || data.items || [];
+  },
+
+  getTopOfWeek: async (): Promise<Novel[]> => {
+    const { data } = await apiClient.get('/novels?sort=views_week&limit=15');
+    return data.data?.items || data.items || [];
+  },
+
+  getTopOfDay: async (): Promise<Novel[]> => {
+    const { data } = await apiClient.get('/novels?sort=views_day&limit=15');
+    return data.data?.items || data.items || [];
+  },
+
+  getLatestUpdates: async (): Promise<LatestUpdate[]> => {
+
+    const { data } = await apiClient.get('/novels/latest-updates?limit=15');
+    return data.data || data;
+  },
+
   getNovelById: async (id: number | string): Promise<Novel> => {
     const { data } = await apiClient.get(`/novels/${id}`);
     return data.data.novel;
@@ -30,3 +53,4 @@ export const novelsService = {
     await apiClient.delete(`/novels/${id}`);
   }
 };
+

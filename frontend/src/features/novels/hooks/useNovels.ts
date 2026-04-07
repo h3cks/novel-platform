@@ -20,6 +20,34 @@ export const useNovel = (id: string) => {
   });
 };
 
+export const useRecommendedNovels = () => {
+  return useQuery({
+    queryKey: ['novels', 'recommended'],
+    queryFn: novelsService.getRecommended,
+  });
+};
+
+export const useTopOfWeekNovels = () => {
+  return useQuery({
+    queryKey: ['novels', 'top-week'],
+    queryFn: novelsService.getTopOfWeek,
+  });
+};
+
+export const useTopOfDayNovels = () => {
+  return useQuery({
+    queryKey: ['novels', 'top-day'],
+    queryFn: novelsService.getTopOfDay,
+  });
+};
+
+export const useLatestUpdates = () => {
+  return useQuery({
+    queryKey: ['novels', 'latest-updates'],
+    queryFn: novelsService.getLatestUpdates,
+  });
+};
+
 export const useCreateNovel = () => {
   const queryClient = useQueryClient();
   return useMutation({
