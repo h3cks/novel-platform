@@ -4,28 +4,32 @@ import { useAuthStore } from '@/features/auth/store/useAuthStore';
 import { useNovels } from '@/features/novels/hooks/useNovels';
 import Link from 'next/link';
 
-export const AuthorNovelList = ({ novels }: { novels: any }) => {
-  // 1. ДОДАЄМО БЕЗПЕЧНЕ ВИТЯГНЕННЯ МАСИВУ:
+// 1. Прибираємо { novels } з параметрів. Тепер компонент нічого не вимагає.
+export const AuthorNovelList = () => {
+  // 2. Отримуємо поточного користувача зі стору
+  const user = useAuthStore((state) => state.user);
+
+  // 3. Завантажуємо новели (передаємо ID автора, щоб отримати тільки його твори)
+  const { data: novels, isLoading, isError } = useNovels({ authorId: user?.id });
+
+  // 4. Додаємо стан завантаження
+  if (isLoading) {
+    return <div className="text-center py-10 text-slate-500">Завантаження ваших новел...</div>;
+  }
+
+  if (isError) {
+    return <div className="text-center py-10 text-red-500">Помилка завантаження даних.</div>;
+  }
+
+  // Безпечне витягнення масиву:
   const novelsArray = Array.isArray(novels)
     ? novels
     : novels?.items || novels?.data?.items || novels?.data || [];
 
-  // 2. Перевіряємо, чи масив не порожній
+  // Перевіряємо, чи масив не порожній (я об'єднав ваші два блоки if в один красивий)
   if (!novelsArray || novelsArray.length === 0) {
     return (
-      <div className="text-center py-10 bg-white rounded-lg border border-slate-200 mt-4">
-        <p className="text-slate-500 mb-4">У вас ще немає створених новел.</p>
-        <Link href="/studio/novels/create" className="text-indigo-600 font-semibold hover:underline">
-          Створити першу новелу &rarr;
-        </Link>
-      </div>
-    );
-  }
-
-
-  if (novels.length === 0) {
-    return (
-      <div className="bg-white border border-gray-200 rounded-lg p-12 text-center shadow-sm">
+      <div className="bg-white border border-gray-200 rounded-lg p-12 text-center shadow-sm mt-4">
         <div className="w-16 h-16 bg-indigo-50 text-indigo-500 rounded-full flex items-center justify-center mx-auto mb-4">
           <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
@@ -35,13 +39,15 @@ export const AuthorNovelList = ({ novels }: { novels: any }) => {
         <p className="text-gray-500 mb-6 max-w-md mx-auto">
           Почніть свою письменницьку подорож прямо зараз. Створіть першу новелу, додайте розділи та поділіться нею з читачами.
         </p>
+        <Link href="/studio/novels/create" className="text-indigo-600 font-semibold hover:underline">
+          Створити першу новелу &rarr;
+        </Link>
       </div>
     );
   }
 
   return (
     <div className="grid gap-4 mt-4">
-      {/* 3. ВИКОРИСТОВУЄМО novelsArray ЗАМІСТЬ novels */}
       {novelsArray.map((novel: any) => (
         <div key={novel.id} className="bg-white border border-gray-200 rounded-lg p-5 shadow-sm flex flex-col sm:flex-row gap-5 items-start sm:items-center hover:shadow-md transition-shadow">
           {novel.coverUrl ? (

@@ -1,5 +1,7 @@
+// src/app/novels/page.tsx
 import type { Metadata } from 'next';
-import { NovelList } from '@/features/novels/components/NovelList';
+// Імпортуємо нашу нову обгортку замість NovelList
+import { CatalogContent } from '@/features/novels/components/CatalogContent';
 
 export const metadata: Metadata = {
   title: 'Каталог | NovelHub',
@@ -12,8 +14,6 @@ export default function NovelsPage() {
       <aside className="w-full md:w-64 shrink-0">
         <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 sticky top-24">
           <h2 className="font-bold text-lg text-slate-900 mb-4">Фільтри</h2>
-
-
           <div className="space-y-6">
             <div>
               <h3 className="text-sm font-semibold text-slate-700 mb-3">Статус</h3>
@@ -50,7 +50,7 @@ export default function NovelsPage() {
           </div>
         </div>
 
-        <NovelList />
+        <CatalogContent />
       </section>
     </div>
   );
