@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { NovelDetails } from '@/features/novels/components/NovelDetails';
 import { ChapterList } from '@/features/chapters/components/ChapterList';
+import { CommentSection } from '@/features/comments/components/CommentSection';
 
 export const metadata: Metadata = {
   title: 'Деталі новели | NovelHub',
@@ -18,12 +19,10 @@ export default function NovelPage({ params }: NovelPageProps) {
     <div className="max-w-5xl mx-auto py-6 px-4 sm:px-6">
       <NovelDetails novelId={params.id} />
 
-      {/* Підключаємо створений список розділів */}
       <ChapterList novelId={params.id} />
 
-      {/* У майбутньому тут можна додати:
-        - <CommentSection novelId={params.id} /> (Коментарі)
-      */}
+      <CommentSection novelId={params.id} /> (Коментарі)
+
     </div>
   );
 }

@@ -11,6 +11,7 @@ import commentRoutes from './routes/comment.routes';
 import reportsRouter from './routes/report.routes';
 import metaRouter from './routes/meta.routes';
 import uploadRoutes from './routes/upload.routes';
+import adminRoutes from './routes/admin.routes';
 import { errorHandler } from './middlewares/errorHandler';
 
 const app = express();
@@ -32,6 +33,7 @@ apiRouter.use('/comments', commentRoutes);
 apiRouter.use('/reports', reportsRouter);
 apiRouter.use('/meta', metaRouter);
 apiRouter.use('/upload', uploadRoutes);
+apiRouter.use('/admin', adminRoutes);
 
 app.use('/api/v1', apiRouter);
 
