@@ -60,7 +60,13 @@ export const authMiddleware = async (
     }
 
     req.user = user;
-    req.userId = user.id;
+
+
+    prisma.user.update({
+      where: { id: user.id },
+      data: { lastActive: new Date() }
+    }).catch(console.error);
+
     next();
   } catch (error) {
     if (error instanceof jwt.TokenExpiredError) {

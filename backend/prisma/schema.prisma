@@ -43,6 +43,8 @@ model User {
   passwordResetExpires DateTime?
   avatarUrl            String?
   role                 UserRole  @default(READER)
+  isBlocked            Boolean   @default(false)
+  lastActive           DateTime  @default(now())
   createdAt            DateTime  @default(now())
 
   novels   Novel[]
