@@ -3,6 +3,7 @@ import * as profileService from '../services/profile.service';
 import { isDisplayNameValid, isValidUrl } from '../utils/validators';
 import { ok, fail } from '../utils/response';
 import { asyncHandler } from '../middlewares/asyncHandler';
+import prisma from '../prisma/client';
 
 export const getProfile = asyncHandler(async (req: Request, res: Response) => {
   const id = Number(req.params.id);
@@ -66,4 +67,31 @@ export const deleteProfile = asyncHandler(async (req: Request, res: Response) =>
     if (err?.code === 'FORBIDDEN') return fail(res, 403, 'FORBIDDEN', 'Forbidden');
     throw err;
   }
+});
+
+export const getHistory = asyncHandler(async (req: Request, res: Response) => {
+  const userId = (req as any).user.id;
+
+  // Отримуємо останні 30 переглядів користувача
+  const history = await prisma.viewHistory.findMany({
+    where: { userId },
+    orderBy: { viewedAt: 'desc' },
+    take: 30,
+    include: {
+      novel: {
+        select: { id: true, title: true, coverUrl: true }
+      },
+      chapter: {
+        select: { id: true, title: true, order: true }
+      }
+    }
+  });
+
+  // Відфільтровуємо записи, де новела або глава були видалені
+  const validHistory = history.filter((h: any) => h.novel && h.chapter);
+
+  res.status(200).json({
+    success: true,
+    data: validHistory
+  });
 });

@@ -11,15 +11,16 @@ export const novelSchema = z.object({
     .optional(),
   coverUrl: z.string().url('Некоректний URL обкладинки').optional().or(z.literal('')),
 
-  // Додано жанри та теги як масиви ID
   genreIds: z
     .array(z.number())
     .min(1, 'Оберіть хоча б 1 жанр')
-    .max(5, 'Можна обрати максимум 3 жанри'),
+    .max(5, 'Можна обрати максимум 5 жанрів'), // Виправлено текст помилки
   tagIds: z
     .array(z.number())
     .max(20, 'Можна обрати максимум 20 тегів')
     .default([]),
+
+  status: z.enum(['DRAFT', 'PUBLISHED']).optional(),
 });
 
 export type NovelFormValues = z.infer<typeof novelSchema>;
