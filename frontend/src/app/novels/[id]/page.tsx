@@ -21,7 +21,7 @@ export default function NovelPage({ params }: NovelPageProps) {
 
       <ChapterList novelId={params.id} />
 
-      <CommentSection novelId={params.id} /> (Коментарі)
+      <CommentSection novelId={params.id} />
 
     </div>
   );

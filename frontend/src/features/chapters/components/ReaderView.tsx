@@ -17,8 +17,15 @@ export const ReaderView = ({ novelId, chapterId }: ReaderViewProps) => {
   const { data: chapter, isLoading, isError } = useChapter(novelId, chapterId);
   const { fontSize, theme } = useReaderStore();
   const [mounted, setMounted] = useState(false);
+  const [cleanContent, setCleanContent] = useState<string>('');
 
-  useEffect(() => setMounted(true), []);
+  useEffect(() => {
+    setMounted(true);
+    if (chapter?.content) {
+      // Очищаємо HTML тільки на стороні клієнта після монтування
+      setCleanContent(DOMPurify.sanitize(chapter.content));
+    }
+  }, [chapter]);
 
   if (isLoading) {
     return (
@@ -44,32 +51,21 @@ export const ReaderView = ({ novelId, chapterId }: ReaderViewProps) => {
     );
   }
 
-  // Визначаємо класи для теми
   const themeClasses = {
     light: 'bg-white text-gray-900',
-    sepia: 'bg-[#fcf8ef] text-[#5b4636]', // М'який колір для сепії
+    sepia: 'bg-[#fcf8ef] text-[#5b4636]',
     dark: 'bg-[#121212] text-gray-300',
   };
 
-  // Чекаємо на монтування клієнта, щоб застосувати збережену тему (уникаємо моргання)
   const activeThemeClass = mounted ? themeClasses[theme] : themeClasses.light;
   const prevChapterId = chapter?.prevChapterId;
   const nextChapterId = chapter?.nextChapterId;
 
-  const sanitizedContent = typeof window !== 'undefined'
-    ? DOMPurify.sanitize(chapter.content)
-    : chapter.content;
-
   return (
     <div className={`min-h-screen pb-20 transition-colors duration-300 ${activeThemeClass}`}>
       <div className="max-w-3xl mx-auto px-4 sm:px-6 py-8">
-
-        {/* Хлібні крихти / Навігація */}
         <div className="mb-6">
-          <Link
-            href={`/novels/${novelId}`}
-            className="text-sm font-medium opacity-70 hover:opacity-100 flex items-center gap-1 transition-opacity"
-          >
+          <Link href={`/novels/${novelId}`} className="text-sm font-medium opacity-70 hover:opacity-100 flex items-center gap-1 transition-opacity">
             &larr; Назад до новели
           </Link>
         </div>
@@ -81,36 +77,26 @@ export const ReaderView = ({ novelId, chapterId }: ReaderViewProps) => {
             Розділ {chapter.order}: {chapter.title}
           </h1>
 
+          {/* Рендеримо контент тільки коли він очищений */}
           <div
             className="prose prose-lg max-w-none prose-headings:font-bold reader-content leading-relaxed"
             style={{ fontSize: mounted ? `${fontSize}px` : '18px' }}
-            dangerouslySetInnerHTML={{ __html: sanitizedContent }}
+            dangerouslySetInnerHTML={{ __html: cleanContent }}
           />
         </article>
 
-        {/* Робоча навігація між розділами */}
         <div className="mt-16 pt-8 border-t border-gray-200/20 flex justify-between items-center">
           {prevChapterId ? (
-            <Link
-              href={`/novels/${novelId}/chapters/${prevChapterId}`}
-              className="px-6 py-2 rounded bg-black/5 hover:bg-black/10 dark:bg-white/5 dark:hover:bg-white/10 transition"
-            >
+            <Link href={`/novels/${novelId}/chapters/${prevChapterId}`} className="px-6 py-2 rounded bg-black/5 hover:bg-black/10 dark:bg-white/5 dark:hover:bg-white/10 transition">
               &larr; Попередній
             </Link>
-          ) : (
-            <div /> // Порожній блок для правильного вирівнювання через justify-between
-          )}
+          ) : <div />}
 
           {nextChapterId ? (
-            <Link
-              href={`/novels/${novelId}/chapters/${nextChapterId}`}
-              className="px-6 py-2 bg-indigo-600 text-white hover:bg-indigo-700 transition"
-            >
+            <Link href={`/novels/${novelId}/chapters/${nextChapterId}`} className="px-6 py-2 bg-indigo-600 text-white hover:bg-indigo-700 transition">
               Наступний &rarr;
             </Link>
-          ) : (
-            <span className="text-gray-400 italic">Це останній розділ</span>
-          )}
+          ) : <span className="text-gray-400 italic">Це останній розділ</span>}
         </div>
 
         <CommentSection chapterId={chapterId} />

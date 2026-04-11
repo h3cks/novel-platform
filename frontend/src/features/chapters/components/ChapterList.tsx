@@ -15,8 +15,10 @@ export const ChapterList = ({ novelId }: ChapterListProps) => {
     queryKey: ['chapters', novelId],
     queryFn: async () => {
       const { data } = await apiClient.get(`/novels/${novelId}/chapters`);
-      // Адаптуємося під можливі варіанти відповіді бекенду
-      return data.data?.items || data.items || data || [];
+
+      const chaptersArray = data.data?.items || data.items || data.data || data;
+
+      return Array.isArray(chaptersArray) ? chaptersArray : [];
     },
   });
 

@@ -77,7 +77,6 @@ export const NovelDetails = ({ novelId }: NovelDetailsProps) => {
             </div>
           </div>
 
-          <CommentSection novelId={novelId} />
         </div>
       </div>
 
