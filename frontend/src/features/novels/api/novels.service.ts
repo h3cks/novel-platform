@@ -3,8 +3,24 @@ import { Novel, CreateNovelDTO, UpdateNovelDTO, LatestUpdate, NovelStatus } from
 
 export const novelsService = {
   getNovels: async (params?: any) => {
-    const { data } = await apiClient.get('/novels', { params });
-    return data;
+
+    const queryParams = { ...params };
+
+    if (Array.isArray(queryParams.genres)) {
+      queryParams.genres = queryParams.genres.join(',');
+    }
+    if (Array.isArray(queryParams.tags)) {
+      queryParams.tags = queryParams.tags.join(',');
+    }
+    if (Array.isArray(queryParams.excludeGenres)) {
+      queryParams.excludeGenres = queryParams.excludeGenres.join(',');
+    }
+    if (Array.isArray(queryParams.excludeTags)) {
+      queryParams.excludeTags = queryParams.excludeTags.join(',');
+    }
+
+    const { data } = await apiClient.get('/novels', { params: queryParams });
+    return data.data?.items || data.items || data.data || data || [];
   },
 
   // НОВІ МЕТОДИ ДЛЯ ГОЛОВНОЇ СТОРІНКИ:

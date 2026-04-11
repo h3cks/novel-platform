@@ -1,29 +1,38 @@
 'use client';
 
-import { useState } from 'react';
-import { useCreateComment } from '../hooks/useCreateComment';
+import { useState, useEffect } from 'react';
 import { useAuthStore } from '@/features/auth/store/useAuthStore';
+import { useCreateComment } from '../hooks/useCreateComment';
 import Link from 'next/link';
 
 interface CommentFormProps {
   novelId?: string;
   chapterId?: string;
   parentId?: number;
-  placeholder?: string;
   onSuccess?: () => void;
-  autoFocus?: boolean;
+  placeholder?: string;
 }
 
-export const CommentForm = ({ novelId, chapterId, parentId, placeholder = 'Написати коментар...', onSuccess, autoFocus }: CommentFormProps) => {
+export const CommentForm = ({ novelId, chapterId, parentId, onSuccess, placeholder = "Написати коментар..." }: CommentFormProps) => {
   const [text, setText] = useState('');
-  const isAuthenticated = useAuthStore((state) => !!state.token);
+  const [mounted, setMounted] = useState(false);
+  const { user } = useAuthStore();
+
   const { mutate: createComment, isPending } = useCreateComment({ novelId, chapterId });
 
-  if (!isAuthenticated) {
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!mounted) {
+    return <div className="h-[120px] bg-slate-50 rounded-2xl animate-pulse border border-slate-100"></div>;
+  }
+
+  if (!user) {
     return (
-      <div className="bg-gray-50 p-6 rounded-lg border border-gray-100 text-center">
-        <p className="text-gray-600 mb-3">Увійдіть, щоб залишити коментар</p>
-        <Link href="/auth/login" className="inline-block bg-blue-600 text-white px-6 py-2 rounded-md font-medium hover:bg-blue-700 transition">
+      <div className="bg-slate-50 p-6 rounded-2xl border border-slate-100 text-center">
+        <p className="text-slate-600 mb-3">Увійдіть, щоб залишити коментар</p>
+        <Link href="/auth/login" className="inline-block bg-indigo-600 text-white font-semibold px-6 py-2 rounded-xl hover:bg-indigo-700 transition-colors">
           Увійти
         </Link>
       </div>
@@ -55,17 +64,16 @@ export const CommentForm = ({ novelId, chapterId, parentId, placeholder = 'На�
       <textarea
         value={text}
         onChange={(e) => setText(e.target.value)}
-        disabled={isPending}
-        autoFocus={autoFocus}
         placeholder={placeholder}
-        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none resize-y min-h-[100px] disabled:bg-gray-50"
+        disabled={isPending}
+        className="w-full p-4 border border-slate-200 rounded-2xl resize-y min-h-[120px] focus:ring-2 focus:ring-indigo-500 outline-none"
       />
       <div className="flex justify-end gap-2">
-        {onSuccess && ( // Якщо є onSuccess, значить це форма відповіді (Reply), показуємо кнопку Скасувати
+        {parentId && onSuccess && (
           <button
             type="button"
             onClick={onSuccess}
-            className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-md font-medium transition"
+            className="px-5 py-2 text-slate-600 font-semibold hover:bg-slate-100 rounded-xl"
           >
             Скасувати
           </button>
@@ -73,7 +81,7 @@ export const CommentForm = ({ novelId, chapterId, parentId, placeholder = 'На�
         <button
           type="submit"
           disabled={isPending || !text.trim()}
-          className="bg-blue-600 text-white px-6 py-2 rounded-md font-medium hover:bg-blue-700 transition-colors disabled:opacity-50"
+          className="bg-indigo-600 text-white font-semibold px-6 py-2.5 rounded-xl hover:bg-indigo-700 transition-colors disabled:opacity-50"
         >
           {isPending ? 'Відправка...' : 'Відправити'}
         </button>

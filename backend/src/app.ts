@@ -30,7 +30,7 @@ apiRouter.use('/auth', authRoutes);
 apiRouter.use('/profile', profileRoutes);
 apiRouter.use('/novels', novelRoutes);
 apiRouter.use('/', chapterRoutes);
-apiRouter.use('/comments', commentRoutes);
+apiRouter.use('/', commentRoutes);
 apiRouter.use('/reports', reportsRouter);
 apiRouter.use('/meta', metaRouter);
 apiRouter.use('/upload', uploadRoutes);
