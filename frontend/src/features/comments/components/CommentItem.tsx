@@ -59,7 +59,6 @@ export const CommentItem = ({ comment, novelId, chapterId }: CommentItemProps) =
               parentId={comment.id}
               placeholder={`Відповісти ${comment.user.username}...`}
               onSuccess={() => setIsReplying(false)}
-              autoFocus
             />
           </div>
         )}
