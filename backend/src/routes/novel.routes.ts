@@ -1,23 +1,19 @@
 import { Router } from 'express';
 import * as novelCtrl from '../controllers/novel.controller';
 import { authMiddleware } from '../middlewares/auth.middleware';
+// Додаємо authOptional, якщо його тут ще немає
 import { authOptional } from '../middlewares/authOptional.middleware';
 
 const router = Router();
 
 router.post('/', authMiddleware, novelCtrl.createNovel);
-
-// List novels (public, but attach optional user info if token present)
 router.get('/', authOptional, novelCtrl.listNovels);
 
-// Get novel by id (attach optional auth to check access)
+// ВИПРАВЛЕНО: замінено authMiddleware на authOptional (або можна взагалі прибрати мідлвару)
+router.get('/latest-updates', authOptional, novelCtrl.getLatestUpdates);
+
 router.get('/:id', authOptional, novelCtrl.getNovel);
-
 router.post('/:id/publish', authMiddleware, novelCtrl.publishNovel);
-
-router.get('/latest-updates', authMiddleware, novelCtrl.getLatestUpdates);
-
-// edit & delete
 router.patch('/:id', authMiddleware, novelCtrl.updateNovel);
 router.delete('/:id', authMiddleware, novelCtrl.deleteNovel);
 

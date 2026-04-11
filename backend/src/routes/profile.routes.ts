@@ -13,4 +13,6 @@ router.patch('/', authMiddleware, profileCtrl.updateProfile);
 // Видалення акаунта з усіма даними
 router.delete('/', authMiddleware, profileCtrl.deleteProfile);
 router.delete('/:id', authMiddleware, profileCtrl.deleteProfile);
+
+router.get('/history', profileCtrl.getHistory);
 export default router;

@@ -3,8 +3,9 @@ import { Notification } from '../types';
 
 export const notificationsService = {
   getNotifications: async (): Promise<Notification[]> => {
-    const { data } = await apiClient.get<Notification[]>('/notifications');
-    return data;
+    const { data } = await apiClient.get('/notifications');
+    // Підлаштовуємо під формат бекенду (шукаємо масив всередині data)
+    return data.data?.items || data.data || data || [];
   },
 
   markAsRead: async (id: number): Promise<void> => {
