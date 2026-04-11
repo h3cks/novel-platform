@@ -60,6 +60,10 @@ export const novelsService = {
     return data.data.novel;
   },
 
+  rateNovel: async (novelId: string | number, score: number): Promise<void> => {
+    await apiClient.post(`/novels/${novelId}/rate`, { score });
+  },
+
   publishNovel: async (id: number | string): Promise<Novel> => {
     const { data } = await apiClient.post(`/novels/${id}/publish`);
     return data.data as any;

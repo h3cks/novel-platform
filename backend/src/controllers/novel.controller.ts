@@ -90,37 +90,61 @@ export const createNovel = asyncHandler(async (req: Request, res: Response) => {
   }
 });
 
+export const rateNovel = asyncHandler(async (req: Request, res: Response) => {
+  const novelId = Number(req.params.id);
+  const userId = (req as any).user.id;
+  const { score } = req.body;
+
+  if (score < 1 || score > 5) return res.status(400).json({ message: 'Invalid score' });
+
+  await prisma.rating.upsert({
+    where: { novelId_userId: { novelId, userId } },
+    update: { score },
+    create: { novelId, userId, score }
+  });
+
+  res.status(200).json({ success: true });
+});
+
+export const addBookmark = asyncHandler(async (req: Request, res: Response) => {
+  const novelId = Number(req.params.id);
+  const userId = (req as any).user.id;
+
+  await prisma.follow.create({
+    data: { novelId, userId }
+  });
+
+  res.status(200).json({ success: true });
+});
+
+export const removeBookmark = asyncHandler(async (req: Request, res: Response) => {
+  const novelId = Number(req.params.id);
+  const userId = (req as any).user.id;
+
+  await prisma.follow.delete({
+    where: { userId_novelId: { userId, novelId } }
+  });
+
+  res.status(200).json({ success: true });
+});
+
 export const listNovels = asyncHandler(async (req: Request, res: Response) => {
-  try {
-    const q = typeof req.query.q === 'string' ? req.query.q : undefined;
-    const authorId = req.query.authorId ? Number(req.query.authorId) : undefined;
-    const status = typeof req.query.status === 'string' ? req.query.status : undefined;
-    const page = req.query.page ? Number(req.query.page) : undefined;
-    const limit = req.query.limit ? Number(req.query.limit) : undefined;
-    const genreId = req.query.genreId ? Number(req.query.genreId) : undefined;
-    const tagName = typeof req.query.tagName === 'string' ? req.query.tagName : undefined;
-    const tagId = req.query.tagId ? Number(req.query.tagId) : undefined;
+  const page = Number(req.query.page) || 1;
+  const limit = Number(req.query.limit) || 10;
+  const skip = (page - 1) * limit;
 
-    const requester = (req as any).user
-      ? { id: (req as any).user.id, role: (req as any).user.role }
-      : null;
+  const [items, total] = await Promise.all([
+    prisma.novel.findMany({
+      where: { status: 'PUBLISHED' },
+      skip,
+      take: limit,
+      include: { author: { select: { username: true } } },
+      orderBy: { createdAt: 'desc' }
+    }),
+    prisma.novel.count({ where: { status: 'PUBLISHED' } })
+  ]);
 
-    const result = await novelService.findNovels({
-      q,
-      authorId,
-      status,
-      page,
-      limit,
-      requester,
-      genreId,
-      tagName,
-      tagId,
-    });
-
-    return ok(res, result.items, result.meta);
-  } catch (err: any) {
-    throw err;
-  }
+  res.status(200).json({ success: true, data: { items, total, page, limit } });
 });
 
 export const getNovel = asyncHandler(async (req: Request, res: Response) => {
@@ -265,3 +289,4 @@ export const deleteNovel = asyncHandler(async (req: Request, res: Response) => {
   await novelService.deleteNovel(id);
   return ok(res, { ok: true });
 });
+

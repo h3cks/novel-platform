@@ -7,6 +7,10 @@ export const libraryService = {
     return data.data;
   },
 
+  addBookmark: async (novelId: number | string): Promise<void> => {
+    await apiClient.post(`/novels/${novelId}/bookmark`);
+  },
+
   removeBookmark: async (novelId: number): Promise<void> => {
     await apiClient.delete(`/novels/${novelId}/bookmark`);
   },
