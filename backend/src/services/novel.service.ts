@@ -79,7 +79,7 @@ export async function createNovel(data: NovelCreateInput, authorId: number) {
       });
     }
 
-    // Додавання жанрів за іменами (тут залишаємо цикл, бо можливе створення нових записів)
+    // Додавання жанрів за іменами
     if (Array.isArray(data.genreNames) && data.genreNames.length > 0) {
       for (const raw of data.genreNames) {
         const name = String(raw).trim();
@@ -89,7 +89,7 @@ export async function createNovel(data: NovelCreateInput, authorId: number) {
         if (existing) {
           try {
             await tx.novelGenre.create({ data: { novelId: created.id, genreId: existing.id } });
-          } catch (e) {} // ігноруємо можливі дублікати
+          } catch (e) {}
         } else if (data.createMissingGenres) {
           try {
             const newGenre = await tx.genre.create({ data: { name, slug: toSlug(name) } });
@@ -98,7 +98,6 @@ export async function createNovel(data: NovelCreateInput, authorId: number) {
         }
       }
     }
-
 
     if (Array.isArray(data.tagIds) && data.tagIds.length > 0) {
       const tagData = data.tagIds.map((tid) => ({ novelId: created.id, tagId: tid }));
@@ -122,7 +121,7 @@ export type FindNovelsOptions = {
   genreId?: number | null;
   tagName?: string | null;
   tagId?: number | null;
-  sort?: string | null; // ДОДАНО: підтримка сортування
+  sort?: string | null;
 };
 
 export async function findNovels(opts: FindNovelsOptions) {
@@ -137,7 +136,6 @@ export async function findNovels(opts: FindNovelsOptions) {
   }
   if (opts.authorId) where.authorId = opts.authorId;
 
-  // Visibility handling
   if (opts.status) {
     if (
       opts.requester?.role === 'ADMIN' ||
@@ -168,16 +166,11 @@ export async function findNovels(opts: FindNovelsOptions) {
     where.tags = { some: { tag: { name: opts.tagName } } };
   }
 
-  // ДОДАНО: Логіка сортування
   let orderBy: any = { createdAt: 'desc' };
 
   if (opts.sort === 'recommended') {
-    // Проста імітація рекомендацій (найвищий рейтинг або найбільше закладок).
-    // Для початку візьмемо сортування по ID (або замініть на rating, якщо є поле).
     orderBy = { id: 'desc' };
   } else if (opts.sort === 'views_week' || opts.sort === 'views_day') {
-    // В ідеалі тут має бути запит до таблиці аналітики,
-    // але для старту (щоб не ламати поточну БД) сортуємо за updatedAt
     orderBy = { updatedAt: 'desc' };
   }
 
@@ -187,7 +180,7 @@ export async function findNovels(opts: FindNovelsOptions) {
       where,
       skip,
       take: limit,
-      orderBy, // ВИКОРИСТОВУЄМО ДИНАМІЧНЕ СОРТУВАННЯ
+      orderBy,
       include: {
         author: { select: { id: true, username: true, displayName: true, avatarUrl: true } },
         tags: { include: { tag: true } },
@@ -206,6 +199,19 @@ export async function getNovelById(id: number) {
       author: { select: { id: true, username: true, displayName: true, avatarUrl: true } },
       tags: { include: { tag: true } },
       genres: { include: { genre: true } },
+      // ДОДАНО: Підтягуємо розділи, відсортовані за порядком
+      chapters: {
+        select: { id: true, title: true, order: true, createdAt: true },
+        orderBy: { order: 'asc' }
+      },
+      // ДОДАНО: Підтягуємо всі оцінки (щоб вирахувати середню)
+      ratings: {
+        select: { score: true }
+      },
+      // ДОДАНО: Лічильник додавань у бібліотеку (follows)
+      _count: {
+        select: { followers: true }
+      }
     },
   });
   return novel;
@@ -230,6 +236,7 @@ export async function updateNovel(
     throw { code: 'INVALID_PAYLOAD', message: `Max ${MAX_TAGS} tags allowed` };
   }
 
+  // (пропущено ідентичну валідацію задля економії місця, залишено оригінальний код нижче)
   if (Array.isArray(updates.genreIds) && updates.genreIds.length > 0) {
     const existing = await prisma.genre.findMany({
       where: { id: { in: updates.genreIds } },
@@ -264,7 +271,6 @@ export async function updateNovel(
       },
     });
 
-    // Оновлення жанрів по ID
     if (Array.isArray(updates.genreIds)) {
       await tx.novelGenre.deleteMany({ where: { novelId: id } });
 
@@ -278,7 +284,6 @@ export async function updateNovel(
       }
     }
 
-    // Оновлення жанрів по імені
     if (Array.isArray(updates.genreNames)) {
       await tx.novelGenre.deleteMany({ where: { novelId: id } });
       for (const raw of updates.genreNames) {
@@ -299,7 +304,6 @@ export async function updateNovel(
       }
     }
 
-    // ВИПРАВЛЕНО: Оновлення тегів по ID (помилка з data.tagIds та created.id)
     if (Array.isArray(updates.tagIds)) {
       await tx.novelTag.deleteMany({ where: { novelId: id } });
 
@@ -318,11 +322,10 @@ export async function updateNovel(
 }
 
 export async function getLatestUpdates(limit: number = 15) {
-  // Знаходимо останні опубліковані глави
   const latestChapters = await prisma.chapter.findMany({
     where: {
       novel: {
-        status: 'PUBLISHED' // Тільки для опублікованих новел
+        status: 'PUBLISHED'
       }
     },
     orderBy: { createdAt: 'desc' },
@@ -343,7 +346,7 @@ export async function getLatestUpdates(limit: number = 15) {
     novelId: ch.novelId,
     novelTitle: ch.novel.title,
     chapterId: ch.id,
-    chapterNumber: ch.order, // Припускаючи, що поле називається order
+    chapterNumber: ch.order,
     chapterTitle: ch.title,
     authorUsername: ch.novel.author.username,
     updatedAt: ch.createdAt.toISOString()
@@ -351,8 +354,6 @@ export async function getLatestUpdates(limit: number = 15) {
 }
 
 export async function deleteNovel(id: number) {
-  // Прибрано try/catch. Якщо видалення пов'язаних сутностей падає,
-  // вся транзакція має автоматично скасуватися (Rollback), щоб не псувати базу.
   return prisma.$transaction(async (tx) => {
     await tx.viewHistory.deleteMany({ where: { novelId: id } });
     await tx.chapter.deleteMany({ where: { novelId: id } });

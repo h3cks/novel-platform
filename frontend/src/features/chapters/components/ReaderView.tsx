@@ -2,8 +2,13 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { useQuery, useMutation } from '@tanstack/react-query';
 import { useChapter } from '../hooks/useChapter';
 import { useReaderStore } from '@/store/useReaderStore';
+import { useAuthStore } from '@/features/auth/store/useAuthStore';
+import { chaptersService } from '../api/chapters.service';
+import { libraryService } from '@/features/library/api/library.service';
 import { ReaderSettings } from './ReaderSettings';
 import { CommentSection } from '@/features/comments/components/CommentSection';
 import DOMPurify from 'dompurify';
@@ -14,18 +19,37 @@ interface ReaderViewProps {
 }
 
 export const ReaderView = ({ novelId, chapterId }: ReaderViewProps) => {
+  const router = useRouter();
+  const { user } = useAuthStore();
   const { data: chapter, isLoading, isError } = useChapter(novelId, chapterId);
   const { fontSize, theme } = useReaderStore();
   const [mounted, setMounted] = useState(false);
   const [cleanContent, setCleanContent] = useState<string>('');
 
+  const { data: allChapters } = useQuery({
+    queryKey: ['chapters', novelId],
+    queryFn: () => chaptersService.getNovelChapters(novelId),
+  });
+
+  const deleteChapterMutation = useMutation({
+    mutationFn: () => chaptersService.deleteChapter(novelId, chapterId),
+    onSuccess: () => {
+      alert('Розділ успішно видалено.');
+      router.push(`/novels/${novelId}`);
+    }
+  });
+
   useEffect(() => {
     setMounted(true);
     if (chapter?.content) {
-      // Очищаємо HTML тільки на стороні клієнта після монтування
       setCleanContent(DOMPurify.sanitize(chapter.content));
     }
-  }, [chapter]);
+
+    // ДОДАНО: Запис в історію при завантаженні розділу
+    if (chapter && user) {
+      libraryService.recordHistory(novelId, chapterId).catch(console.error);
+    }
+  }, [chapter, novelId, chapterId, user]);
 
   if (isLoading) {
     return (
@@ -61,13 +85,42 @@ export const ReaderView = ({ novelId, chapterId }: ReaderViewProps) => {
   const prevChapterId = chapter?.prevChapterId;
   const nextChapterId = chapter?.nextChapterId;
 
+  const canDelete = user && (user.role === 'ADMIN' || user.role === 'AUTHOR');
+
   return (
     <div className={`min-h-screen pb-20 transition-colors duration-300 ${activeThemeClass}`}>
       <div className="max-w-3xl mx-auto px-4 sm:px-6 py-8">
-        <div className="mb-6">
+
+        <div className="mb-8 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <Link href={`/novels/${novelId}`} className="text-sm font-medium opacity-70 hover:opacity-100 flex items-center gap-1 transition-opacity">
-            &larr; Назад до новели
+            &larr; До новели
           </Link>
+
+          <div className="flex items-center gap-3 w-full sm:w-auto">
+            {allChapters && allChapters.length > 0 && (
+              <select
+                className="bg-transparent border border-gray-300 dark:border-gray-700 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 w-full sm:w-64"
+                value={chapterId}
+                onChange={(e) => router.push(`/novels/${novelId}/chapters/${e.target.value}`)}
+              >
+                {allChapters.map((ch: any) => (
+                  <option key={ch.id} value={ch.id} className="text-black">
+                    Розділ {ch.order}: {ch.title}
+                  </option>
+                ))}
+              </select>
+            )}
+
+            {canDelete && (
+              <button
+                onClick={() => { if(confirm('Ви впевнені, що хочете видалити розділ?')) deleteChapterMutation.mutate(); }}
+                disabled={deleteChapterMutation.isPending}
+                className="px-3 py-1.5 bg-red-100 text-red-600 hover:bg-red-200 rounded-lg text-sm font-bold transition flex-shrink-0"
+              >
+                Видалити
+              </button>
+            )}
+          </div>
         </div>
 
         <ReaderSettings />
@@ -77,7 +130,6 @@ export const ReaderView = ({ novelId, chapterId }: ReaderViewProps) => {
             Розділ {chapter.order}: {chapter.title}
           </h1>
 
-          {/* Рендеримо контент тільки коли він очищений */}
           <div
             className="prose prose-lg max-w-none prose-headings:font-bold reader-content leading-relaxed"
             style={{ fontSize: mounted ? `${fontSize}px` : '18px' }}

@@ -4,8 +4,9 @@ import Link from 'next/link';
 import { useAuthStore } from '@/features/auth/store/useAuthStore';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState, useRef } from 'react';
-import { useQueryClient } from '@tanstack/react-query';
+import { useQueryClient, useQuery } from '@tanstack/react-query';
 import Image from 'next/image';
+import { notificationsService } from '@/features/notifications/api/notifications.service';
 
 export const Navbar = () => {
   const user = useAuthStore((state) => state.user);
@@ -40,6 +41,17 @@ export const Navbar = () => {
   }, [isMenuOpen]);
 
   const isAuthenticated = !!token;
+
+  // ДОДАНО: Запит на отримання сповіщень для підрахунку непрочитаних
+  const { data: notifications } = useQuery({
+    queryKey: ['notifications'],
+    queryFn: notificationsService.getNotifications,
+    enabled: isMounted && isAuthenticated && !!user,
+    refetchInterval: 60000, // Автоматичне оновлення кожні 60 секунд
+  });
+
+  // ДОДАНО: Підрахунок непрочитаних повідомлень
+  const unreadCount = notifications?.filter((n: any) => !n.read).length || 0;
 
   const handleLogout = () => {
     setIsMenuOpen(false);
@@ -80,7 +92,7 @@ export const Navbar = () => {
               {/* Кнопка відкриття меню */}
               <button
                 onClick={() => setIsMenuOpen(!isMenuOpen)}
-                className="flex items-center gap-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 rounded-full p-0.5 transition-shadow"
+                className="flex items-center gap-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 rounded-full p-0.5 transition-shadow relative"
               >
                 <div className="w-10 h-10 rounded-full overflow-hidden bg-indigo-100 border-2 border-white shadow-sm flex items-center justify-center text-indigo-700 font-bold">
                   {user?.avatarUrl ? (
@@ -96,6 +108,10 @@ export const Navbar = () => {
                     <span>{avatarLetter}</span>
                   )}
                 </div>
+                {/* ДОДАНО: Червона крапка на аватарці, якщо є непрочитані */}
+                {unreadCount > 0 && (
+                  <span className="absolute top-0 right-0 block h-3 w-3 rounded-full bg-red-500 ring-2 ring-white"></span>
+                )}
               </button>
 
               {/* Випадаюче меню */}
@@ -132,16 +148,21 @@ export const Navbar = () => {
                     Моя бібліотека
                   </Link>
 
-                  {/* Повідомлення */}
+                  {/* ДОДАНО: Повідомлення з бейджем кількості */}
                   <Link href="/notifications" onClick={handleLinkClick} className="flex items-center justify-between px-4 py-2.5 text-sm font-medium text-slate-700 hover:bg-indigo-50 hover:text-indigo-700 transition-colors">
                     <div className="flex items-center gap-3">
                       <svg className="w-5 h-5 opacity-70" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" /></svg>
                       Повідомлення
                     </div>
+                    {unreadCount > 0 && (
+                      <span className="bg-red-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-sm">
+                        {unreadCount > 99 ? '99+' : unreadCount}
+                      </span>
+                    )}
                   </Link>
                 </div>
 
-                {/* Студія (Доступно всім авторизованим) */}
+                {/* Студія */}
                 <div className="py-2 border-t border-slate-100">
                   <Link
                     href="/studio"
@@ -155,7 +176,7 @@ export const Navbar = () => {
                   </Link>
                 </div>
 
-                {/* ДОДАНО: Адмін-панель (Доступно тільки ADMIN та MODERATOR) */}
+                {/* Адмін-панель */}
                 {(user?.role === 'ADMIN' || user?.role === 'MODERATOR') && (
                   <div className="py-2 border-t border-slate-100">
                     <Link

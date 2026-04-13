@@ -5,7 +5,6 @@ import { notifyNovelAndAuthorFollowers } from './notification.service';
 import * as notificationService from './notification.service';
 import * as cfg from '../config';
 
-// config / defaults
 const MIN_WORDS_PER_CHAPTER_EFFECTIVE = Number(
   cfg.MIN_WORDS_PER_CHAPTER ?? process.env.MIN_WORDS_PER_CHAPTER ?? 100,
 );
@@ -23,7 +22,6 @@ const LANG_DETECTION_RATIO = Number(
   cfg.LANG_DETECTION_RATIO ?? process.env.LANG_DETECTION_RATIO ?? 0.6,
 );
 
-/** helper: extract links & domain */
 function extractLinksFromHtml(html: string): string[] {
   const matches = html.match(/https?:\/\/[^\s"'<>]+/gi);
   return matches ?? [];
@@ -37,7 +35,6 @@ function domainOfUrl(urlStr: string): string | null {
   }
 }
 
-/** create k-word shingles (lowercased) */
 function shingles(text: string, k = 5): Set<string> {
   const words = text
     .toLowerCase()
@@ -64,9 +61,6 @@ function jaccard(a: Set<string>, b: Set<string>) {
   return union === 0 ? 0 : inter / union;
 }
 
-/**
- * Language heuristic: ratio of Cyrillic letters to all letters.
- */
 function cyrillicRatio(text: string) {
   if (!text) return 0;
   const letters = text.match(/\p{L}/gu) ?? [];
@@ -84,21 +78,17 @@ type CreateChapterInput = {
 };
 
 export async function createChapter(novelId: number, actorId: number, input: CreateChapterInput) {
-  // sanitize and prepare (service-level)
   const cleanContent = sanitizeContent(input.content);
   const wordCount = countWordsFromHtml(cleanContent);
 
-  // Per-chapter minimum
   if (wordCount < MIN_WORDS_PER_CHAPTER_EFFECTIVE) {
     const e: any = new Error(`Chapter must have at least ${MIN_WORDS_PER_CHAPTER_EFFECTIVE} words`);
     e.code = 'CHAPTER_TOO_SHORT';
     throw e;
   }
 
-  // Duplicate detection: prepare shingles for new chapter
   const newSh = shingles(stripHtml(cleanContent), 5);
 
-  // We'll detect duplicates among recent chapters (limit MAX_COMPARE_CHAPTERS)
   const recentChapters = await prisma.chapter.findMany({
     where: { novelId },
     orderBy: { createdAt: 'desc' },
@@ -120,14 +110,12 @@ export async function createChapter(novelId: number, actorId: number, input: Cre
     }
   }
 
-  // External domains check: we will check unique domains among recent contents + this one
   const recentContents = recentChapters.map((r) => r.content);
-  recentContents.unshift(cleanContent); // include new
+  recentContents.unshift(cleanContent);
   const allLinks = recentContents.flatMap((c) => extractLinksFromHtml(c));
   const domains = Array.from(new Set(allLinks.map(domainOfUrl).filter(Boolean)));
   const tooManyExternal = domains.length > MAX_EXTERNAL_LINKS;
 
-  // Language detection for this chapter (per-chapter)
   let languageProblem = false;
   let languageRatio: number | null = null;
   if (LANG_DETECTION_ENABLED) {
@@ -138,22 +126,18 @@ export async function createChapter(novelId: number, actorId: number, input: Cre
     }
   }
 
-  // transaction: create chapter, recompute totals, update novel.wordCount and possibly mark REVIEWING/flagged
   const createdChapter = await prisma.$transaction(async (tx) => {
-    // advisory lock to avoid races when computing order and sums
     await tx.$executeRaw`SELECT pg_advisory_xact_lock(${novelId});`;
 
     const novel = await tx.novel.findUnique({ where: { id: novelId } });
     if (!novel) throw Object.assign(new Error('Novel not found'), { code: 'NOVEL_NOT_FOUND' });
 
-    // compute next order within the tx
     const agg = await tx.chapter.aggregate({
       where: { novelId },
       _max: { order: true },
     });
     const nextOrder = (agg._max.order ?? 0) + 1;
 
-    // create chapter
     const chapter = await tx.chapter.create({
       data: {
         novelId,
@@ -164,21 +148,18 @@ export async function createChapter(novelId: number, actorId: number, input: Cre
       },
     });
 
-    // recompute sum of word counts for the novel
     const sum = await tx.chapter.aggregate({
       where: { novelId },
       _sum: { wordCount: true },
     });
     const totalWords = sum._sum.wordCount ?? 0;
 
-    // Prepare novel update: always update wordCount; if duplicate or many domains or languageProblem -> mark REVIEWING + flagged
     const novelUpdate: any = { wordCount: totalWords };
     if (duplicateDetected || tooManyExternal || languageProblem) {
       novelUpdate.status = 'REVIEWING';
       novelUpdate.flagged = true;
     }
 
-    // Update novel
     await tx.novel.update({
       where: { id: novelId },
       data: novelUpdate,
@@ -187,17 +168,15 @@ export async function createChapter(novelId: number, actorId: number, input: Cre
     return chapter;
   });
 
-  // Post-transaction: send notifications / moderation alerts if needed
+  // Post-transaction: send notifications
   if (duplicateDetected || tooManyExternal || (LANG_DETECTION_ENABLED && languageProblem)) {
     try {
-      // fetch novel author to notify
       const novelAfter = await prisma.novel.findUnique({
         where: { id: novelId },
         select: { authorId: true, title: true },
       });
       const authorId = novelAfter?.authorId ?? null;
 
-      // create a notification for author
       if (authorId) {
         const messageParts: string[] = [];
         if (duplicateDetected)
@@ -216,25 +195,23 @@ export async function createChapter(novelId: number, actorId: number, input: Cre
         await notificationService.createNotification({
           userId: authorId,
           type: 'CHAPTER_FLAGGED',
-          targetType: 'chapter',
-          targetId: createdChapter.id,
+          targetType: 'NOVEL', // ЗМІНЕНО: ведемо на сторінку новели
+          targetId: novelId,   // ЗМІНЕНО: передаємо ID новели
           actorId: actorId,
           message: msg,
         });
       }
-
-      // Optionally: notify moderators (not implemented here) or create moderation task
     } catch (e) {
       console.warn('Failed to create flag notification', e);
     }
   }
 
-  // Normal follower notification (kept as before) — best-effort
+  // Normal follower notification
   setImmediate(() => {
     try {
       notifyNovelAndAuthorFollowers(novelId, actorId, `Нова глава "${createdChapter.title}"`, {
-        targetType: 'chapter',
-        targetId: createdChapter.id,
+        targetType: 'NOVEL', // ЗМІНЕНО: тепер посилання вестиме на сторінку новели
+        targetId: novelId,   // ЗМІНЕНО: передаємо ID новели замість ID глави
       });
     } catch (e) {
       console.warn('notify failed', e);
@@ -285,21 +262,18 @@ export async function getChapterById(id: number) {
 
   if (!chapter) return null;
 
-  // Шукаємо попередню главу (найбільший order, але менший за поточний)
   const prevChapter = await prisma.chapter.findFirst({
     where: { novelId: chapter.novelId, order: { lt: chapter.order } },
     orderBy: { order: 'desc' },
     select: { id: true },
   });
 
-  // Шукаємо наступну главу (найменший order, але більший за поточний)
   const nextChapter = await prisma.chapter.findFirst({
     where: { novelId: chapter.novelId, order: { gt: chapter.order } },
     orderBy: { order: 'asc' },
     select: { id: true },
   });
 
-  // Повертаємо главу разом з ID сусідів
   return {
     ...chapter,
     prevChapterId: prevChapter?.id || null,
@@ -308,7 +282,6 @@ export async function getChapterById(id: number) {
 }
 
 export async function updateChapter(chapterId: number, data: { title?: string; content?: string }) {
-  // sanitize if content provided
   const updates: any = {};
   if (typeof data.title !== 'undefined') updates.title = data.title;
   if (typeof data.content !== 'undefined') {
@@ -318,14 +291,12 @@ export async function updateChapter(chapterId: number, data: { title?: string; c
     updates.wordCount = wc;
   }
 
-  // perform update + recompute novel.wordCount in transaction
   const updated = await prisma.$transaction(async (tx) => {
     const ch = await tx.chapter.update({
       where: { id: chapterId },
       data: updates,
     });
 
-    // recompute sum
     const sum = await tx.chapter.aggregate({
       where: { novelId: ch.novelId },
       _sum: { wordCount: true },
@@ -349,7 +320,6 @@ export async function deleteChapter(chapterId: number) {
 
     await tx.chapter.delete({ where: { id: chapterId } });
 
-    // recompute sum
     const sum = await tx.chapter.aggregate({
       where: { novelId: ch.novelId },
       _sum: { wordCount: true },
