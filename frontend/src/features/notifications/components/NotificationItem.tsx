@@ -11,9 +11,20 @@ interface NotificationItemProps {
 export const NotificationItem = ({ notification }: NotificationItemProps) => {
   const { markSingle } = useMarkAsRead();
 
-  const handleReadClick = (e: React.MouseEvent) => {
-    e.preventDefault(); // Запобігаємо переходу по лінку, якщо клікнули на кнопку
-    markSingle.mutate(notification.id);
+  // Обробник кліку на все сповіщення (перехід + прочитання)
+  const handleNotificationClick = () => {
+    if (!notification.read) {
+      markSingle.mutate(notification.id);
+    }
+  };
+
+  // Обробник кліку ТІЛЬКИ на синю крапку (без переходу)
+  const handleDotClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!notification.read) {
+      markSingle.mutate(notification.id);
+    }
   };
 
   const date = new Date(notification.createdAt).toLocaleDateString('uk-UA', {
@@ -52,13 +63,19 @@ export const NotificationItem = ({ notification }: NotificationItemProps) => {
 
   // Генеруємо посилання залежно від targetType
   let href = '#';
-  if (notification.targetType === 'NOVEL' && notification.targetId) {
+  const tType = notification.targetType?.toUpperCase();
+
+  if (tType === 'NOVEL' && notification.targetId) {
     href = `/novels/${notification.targetId}`;
+  } else if (tType === 'CHAPTER' && notification.targetId) {
+    // Fallback на випадок старих сповіщень у базі
+    href = `/novels`;
   }
 
   return (
     <Link
       href={href}
+      onClick={handleNotificationClick}
       className={`block p-4 border-b border-gray-100 hover:bg-gray-50 transition-colors ${!notification.read ? 'bg-blue-50/50' : 'bg-white'}`}
     >
       <div className="flex gap-4 items-start">
@@ -71,9 +88,9 @@ export const NotificationItem = ({ notification }: NotificationItemProps) => {
         </div>
         {!notification.read && (
           <button
-            onClick={handleReadClick}
+            onClick={handleDotClick}
             disabled={markSingle.isPending}
-            className="w-3 h-3 bg-blue-600 rounded-full shrink-0 hover:bg-blue-800 transition-colors"
+            className="w-3 h-3 bg-blue-600 rounded-full shrink-0 hover:bg-blue-800 transition-colors cursor-pointer"
             title="Позначити як прочитане"
             aria-label="Позначити як прочитане"
           />

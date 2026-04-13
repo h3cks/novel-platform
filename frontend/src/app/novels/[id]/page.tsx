@@ -19,8 +19,6 @@ export default function NovelPage({ params }: NovelPageProps) {
     <div className="max-w-5xl mx-auto py-6 px-4 sm:px-6">
       <NovelDetails novelId={params.id} />
 
-      <ChapterList novelId={params.id} />
-
       <CommentSection novelId={params.id} />
 
     </div>

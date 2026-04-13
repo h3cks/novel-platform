@@ -9,10 +9,17 @@ export interface Novel {
   status: NovelStatus;
   coverUrl: string | null;
   authorId: number;
-  author?: User; // Опціонально, якщо бекенд повертає зв'язки (include)
+  author?: User;
   wordCount: number | null;
   createdAt: string;
   updatedAt: string;
+
+  genres?: { genre: { id: number; name: string } }[];
+  tags?: { tag: { id: number; name: string } }[];
+  chapters?: { id: number; title?: string; order?: number }[];
+
+  ratings?: { score: number }[];
+  _count?: { followers: number };
 }
 
 export interface CreateNovelDTO {
@@ -28,7 +35,7 @@ export interface UpdateNovelDTO {
 }
 
 export interface LatestUpdate {
-  id: number; // ID глави або запису оновлення
+  id: number;
   novelId: number;
   novelTitle: string;
   chapterId: number;

@@ -69,14 +69,28 @@ export const deleteProfile = asyncHandler(async (req: Request, res: Response) =>
   }
 });
 
+export const getBookmarks = asyncHandler(async (req: Request, res: Response) => {
+  const userId = (req as any).user.id;
+  const bookmarks = await prisma.follow.findMany({
+    where: { userId },
+    include: {
+      novel: {
+        select: { id: true, title: true, coverUrl: true, author: { select: { username: true } } }
+      }
+    },
+    orderBy: { createdAt: 'desc' }
+  });
+  res.status(200).json({ success: true, data: bookmarks });
+});
+
 export const getHistory = asyncHandler(async (req: Request, res: Response) => {
   const userId = (req as any).user.id;
 
-  // Отримуємо останні 30 переглядів користувача
   const history = await prisma.viewHistory.findMany({
     where: { userId },
     orderBy: { viewedAt: 'desc' },
-    take: 30,
+    distinct: ['novelId'], // ВАЖЛИВО: Залишає лише один (найостанніший) запис для кожної новели
+    take: 30, // Можна збільшити, якщо хочете зберігати більше 30 унікальних новел в історії
     include: {
       novel: {
         select: { id: true, title: true, coverUrl: true }
@@ -87,11 +101,27 @@ export const getHistory = asyncHandler(async (req: Request, res: Response) => {
     }
   });
 
-  // Відфільтровуємо записи, де новела або глава були видалені
   const validHistory = history.filter((h: any) => h.novel && h.chapter);
+  res.status(200).json({ success: true, data: validHistory });
+});
 
-  res.status(200).json({
-    success: true,
-    data: validHistory
+export const recordHistory = asyncHandler(async (req: Request, res: Response) => {
+  const userId = (req as any).user.id;
+  const { novelId, chapterId } = req.body;
+
+  if (!novelId || !chapterId) return fail(res, 400, 'INVALID_DATA', 'novelId and chapterId required');
+
+  await prisma.$transaction(async (tx) => {
+    // Видаляємо старий запис для цієї ж новели, щоб історія не розросталась в БД
+    await tx.viewHistory.deleteMany({
+      where: { userId, novelId: Number(novelId) }
+    });
+
+    // Створюємо новий запис з поточним прочитаним розділом
+    await tx.viewHistory.create({
+      data: { userId, novelId: Number(novelId), chapterId: Number(chapterId) }
+    });
   });
+
+  res.status(200).json({ success: true });
 });

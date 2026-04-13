@@ -4,8 +4,10 @@ import { authMiddleware } from '../middlewares/auth.middleware';
 
 const router = Router();
 
-// Public: перегляд профілю по id
-router.get('/:id', profileCtrl.getProfile);
+// ВАЖЛИВО: Ці маршрути мають бути ПЕРЕД /:id
+router.get('/bookmarks', authMiddleware, profileCtrl.getBookmarks);
+router.get('/history', authMiddleware, profileCtrl.getHistory);
+router.post('/history', authMiddleware, profileCtrl.recordHistory);
 
 // Protected: оновлення власного профілю
 router.patch('/', authMiddleware, profileCtrl.updateProfile);
@@ -14,5 +16,7 @@ router.patch('/', authMiddleware, profileCtrl.updateProfile);
 router.delete('/', authMiddleware, profileCtrl.deleteProfile);
 router.delete('/:id', authMiddleware, profileCtrl.deleteProfile);
 
-router.get('/history', profileCtrl.getHistory);
+// Public: перегляд профілю по id
+router.get('/:id', profileCtrl.getProfile);
+
 export default router;
