@@ -47,6 +47,9 @@ export const changeRole = asyncHandler(async (req: Request, res: Response) => {
   res.status(200).json({ success: true, data: updatedUser });
 });
 
+
+
+
 // Тепер функція блокування працює реально!
 export const blockUser = asyncHandler(async (req: Request, res: Response) => {
   const { userId } = req.params;
@@ -68,3 +71,4 @@ export const blockUser = asyncHandler(async (req: Request, res: Response) => {
 
   res.status(200).json({ success: true, message: user.isBlocked ? "Розблоковано" : "Заблоковано" });
 });
+

@@ -259,3 +259,40 @@ export async function resetPassword(token: string, newPassword: string) {
 
   return true;
 }
+
+export async function changeEmail(userId: number, newEmail: string) {
+  // Перевірка, чи не зайнятий новий email
+  const exists = await prisma.user.findUnique({ where: { email: newEmail } });
+  if (exists && exists.id !== userId) {
+    const err: any = new Error('Email is already taken by another user');
+    err.code = 'EMAIL_TAKEN';
+    throw err;
+  }
+
+  // Генерація нового токена для підтвердження
+  const token = generateToken(32);
+  const hashedToken = hashToken(token);
+  const expires = new Date(Date.now() + EMAIL_CONFIRM_TOKEN_TTL_HOURS * 60 * 60 * 1000);
+
+  // Оновлення email, скидання статусу підтвердження та збереження токена
+  const updatedUser = await prisma.user.update({
+    where: { id: userId },
+    data: {
+      email: newEmail,
+      emailConfirmed: false, // Обов'язково скидаємо статус
+      emailConfirmToken: hashedToken,
+      emailConfirmExpires: expires,
+    },
+  });
+
+  // Відправка листа на нову адресу
+  try {
+    await sendConfirmationEmail(newEmail, token);
+  } catch (err) {
+    console.error('Failed to send confirmation email for email change:', err);
+    // Не викидаємо помилку, щоб не блокувати процес зміни,
+    // але користувач зможе запросити лист повторно через UI
+  }
+
+  return safeUser(updatedUser);
+}
