@@ -5,15 +5,6 @@ import { loginRateLimiter, softRateLimiter } from '../middlewares/rateLimit.midd
 
 const router = Router();
 
-/**
- * Public:
- * POST /auth/register
- * GET  /auth/confirm?token=
- * POST /auth/resend-confirmation
- * POST /auth/login
- * POST /auth/request-password-reset
- * POST /auth/reset-password
- */
 router.post('/register', authCtrl.register);
 router.get('/confirm', authCtrl.confirmEmail);
 router.post('/resend-confirmation', softRateLimiter, authCtrl.resendConfirmation);
@@ -24,8 +15,8 @@ router.post('/logout', authCtrl.logout);
 router.post('/request-password-reset', softRateLimiter, authCtrl.requestPasswordReset);
 router.post('/reset-password', authCtrl.resetPassword);
 
-// Protected
 router.get('/me', authMiddleware, authCtrl.getMe);
-router.post('/change-password', authMiddleware, authCtrl.changePassword);
+router.patch('/change-password', authMiddleware, authCtrl.changePassword);
 
+router.patch('/change-email', authMiddleware, authCtrl.changeEmail);
 export default router;

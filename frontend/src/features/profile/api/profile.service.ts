@@ -17,4 +17,16 @@ export const profileService = {
     const { data } = await apiClient.patch('/profile', payload);
     return data.data?.user || data.data;
   },
+
+  deleteProfile: async (): Promise<void> => {
+    await apiClient.delete('/profile');
+  },
+
+  changePassword: async (payload: { oldPassword: string; newPassword: string }): Promise<void> => {
+    await apiClient.patch('/auth/change-password', payload);
+  },
+
+  changeEmail: async (payload: { newEmail: string }): Promise<void> => {
+    await apiClient.patch('/auth/change-email', payload);
+  }
 };

@@ -147,16 +147,41 @@ export const getMe = async (req: Request, res: Response): Promise<void> => {
 export const changePassword = asyncHandler(async (req: Request, res: Response) => {
   const user = (req as any).user;
   if (!user) return fail(res, 401, 'UNAUTHORIZED', 'Unauthorized');
-  const { currentPassword, newPassword } = req.body;
-  if (!currentPassword || !newPassword) return fail(res, 400, 'MISSING_FIELDS', 'Missing fields');
+
+  // Додано підтримку oldPassword для сумісності з нашим фронтендом
+  const { currentPassword, oldPassword, newPassword } = req.body;
+  const passwordToVerify = currentPassword || oldPassword;
+
+  if (!passwordToVerify || !newPassword) return fail(res, 400, 'MISSING_FIELDS', 'Missing fields');
   if (!isPasswordValid(newPassword))
     return fail(res, 400, 'INVALID_PASSWORD', 'New password does not meet requirements');
 
   try {
-    await authService.changePassword(user.id, currentPassword, newPassword);
-    return ok(res, { ok: true });
+    await authService.changePassword(user.id, passwordToVerify, newPassword);
+    return ok(res, { ok: true, message: 'Пароль успішно змінено' });
   } catch (err: any) {
     if (err.code === 'INVALID_PASSWORD') return fail(res, 400, 'INVALID_PASSWORD', err.message);
+    throw err;
+  }
+});
+
+// Новий контролер для зміни Email
+export const changeEmail = asyncHandler(async (req: Request, res: Response) => {
+  const user = (req as any).user;
+  if (!user) return fail(res, 401, 'UNAUTHORIZED', 'Unauthorized');
+
+  const { newEmail } = req.body;
+
+  if (!newEmail) return fail(res, 400, 'MISSING_FIELDS', 'New email is required');
+  if (!isEmail(newEmail)) return fail(res, 400, 'INVALID_EMAIL', 'Invalid email format');
+
+  try {
+    const updatedUser = await authService.changeEmail(user.id, newEmail);
+    return ok(res, { ok: true, user: updatedUser, message: 'Email змінено. Перевірте пошту для підтвердження.' });
+  } catch (err: any) {
+    if (err.code === 'EMAIL_TAKEN') {
+      return fail(res, 409, 'EMAIL_TAKEN', 'This email is already in use by another account');
+    }
     throw err;
   }
 });
@@ -190,3 +215,4 @@ export const resetPassword = asyncHandler(async (req: Request, res: Response) =>
     throw err;
   }
 });
+
