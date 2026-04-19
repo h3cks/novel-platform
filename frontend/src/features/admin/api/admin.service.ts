@@ -30,9 +30,5 @@ export const adminService = {
 
   changeRole: async (userId: number, role: string): Promise<void> => {
     await apiClient.patch(`/admin/users/${userId}/role`, { role });
-  },
-
-  deleteUser: async (userId: number): Promise<void> => {
-    await apiClient.delete(`/profile/${userId}`);
   }
 };

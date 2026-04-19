@@ -30,18 +30,6 @@ export default function AdminUsersPage() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin-users'] }),
   });
 
-  // Мутація видалення
-  const deleteMutation = useMutation({
-    mutationFn: (userId: number) => adminService.deleteUser(userId),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin-users'] }),
-  });
-
-  const handleDelete = (user: User) => {
-    if (window.confirm(`Ви впевнені, що хочете видалити акаунт ${user.username}? Це видалить усі його новели та дані!`)) {
-      deleteMutation.mutate(user.id);
-    }
-  };
-
   if (isLoading) return <div className="p-8 text-center text-gray-500">Завантаження списку користувачів...</div>;
 
   return (
@@ -78,7 +66,8 @@ export default function AdminUsersPage() {
                     onChange={(e) => roleMutation.mutate({ userId: user.id, role: e.target.value })}
                     className="bg-transparent border border-gray-200 rounded px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500"
                   >
-                    <option value="USER">Користувач</option>
+                    <option value="READER">Читач (Reader)</option>
+                    <option value="AUTHOR">Автор (Author)</option>
                     <option value="MODERATOR">Модератор</option>
                     <option value="ADMIN">Адмін</option>
                   </select>
@@ -101,12 +90,6 @@ export default function AdminUsersPage() {
                     }`}
                   >
                     {user.isBlocked ? 'Розблокувати' : 'Заблокувати'}
-                  </button>
-                  <button
-                    onClick={() => handleDelete(user)}
-                    className="px-3 py-1 text-red-600 hover:bg-red-50 rounded text-xs font-medium"
-                  >
-                    Видалити
                   </button>
                 </td>
               </tr>
