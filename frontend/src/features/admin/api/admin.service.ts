@@ -24,16 +24,17 @@ export const adminService = {
     return data.data;
   },
 
+  getUserDetail: async (userId: number) => {
+    const { data } = await apiClient.get(`/admin/users/${userId}`);
+    return data.data;
+  },
+
   blockUser: async (userId: number, reason: string): Promise<void> => {
     await apiClient.post(`/admin/users/${userId}/block`, { reason });
   },
 
   changeRole: async (userId: number, role: string): Promise<void> => {
     await apiClient.patch(`/admin/users/${userId}/role`, { role });
-  },
-
-  deleteUser: async (userId: number): Promise<void> => {
-    await apiClient.delete(`/profile/${userId}`);
   },
 
   blockNovel: async (novelId: number, reason: string): Promise<void> => {
@@ -50,5 +51,29 @@ export const adminService = {
 
   sendBroadcast: async (title: string, message: string): Promise<void> => {
     await apiClient.post('/admin/broadcast', { title, message });
+  },
+
+  getNovels: async (page = 1, limit = 20) => {
+    const { data } = await apiClient.get(`/admin/novels?page=${page}&limit=${limit}`);
+    return data.data;
+  },
+
+  getGenres: async () => {
+    const { data } = await apiClient.get('/admin/genres');
+    return data.data;
+  },
+  deleteGenre: async (id: number) => {
+    await apiClient.delete(`/admin/genres/${id}`);
+  },
+  getTags: async () => {
+    const { data } = await apiClient.get('/admin/tags');
+    return data.data;
+  },
+  deleteTag: async (id: number) => {
+    await apiClient.delete(`/admin/tags/${id}`);
+  },
+  getAdminNovelDetail: async (id: number) => {
+    const { data } = await apiClient.get(`/admin/novels/${id}/detail`);
+    return data.data;
   }
 };

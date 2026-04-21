@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { adminService } from '@/features/admin/api/admin.service';
-import { User } from '@/features/auth/types';
+import Link from 'next/link';
 
 export default function AdminUsersPage() {
   const queryClient = useQueryClient();
@@ -56,8 +56,12 @@ export default function AdminUsersPage() {
             {data?.users.map((user) => (
               <tr key={user.id} className="hover:bg-gray-50 transition-colors">
                 <td className="px-6 py-4">
-                  <div className="font-bold text-gray-900">{user.username}</div>
-                  <div className="text-xs text-gray-400">#{user.id}</div>
+                  <Link href={`/admin/users/${user.id}`} className="group">
+                    <div className="font-bold text-gray-900 group-hover:text-indigo-600 transition-colors">
+                      {user.username}
+                    </div>
+                    <div className="text-xs text-gray-400">#{user.id}</div>
+                  </Link>
                 </td>
                 <td className="px-6 py-4 text-gray-600">{user.email}</td>
                 <td className="px-6 py-4">
