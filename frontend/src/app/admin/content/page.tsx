@@ -114,6 +114,16 @@ export default function AdminContentPage() {
     }
   });
 
+  const deleteNovelMutation = useMutation({
+    mutationFn: (id: number) => adminService.deleteNovel(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-novels'] });
+      toast.success('Новелу назавжди видалено');
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.message || 'Помилка при видаленні');
+    }
+  });
 
   return (
     <div className="space-y-6">
@@ -171,12 +181,23 @@ export default function AdminContentPage() {
                       <span className="px-2 py-1 bg-green-100 text-green-700 text-[10px] font-bold rounded uppercase">Активна</span>
                     )}
                   </td>
-                  <td className="px-6 py-4 text-right">
+                  <td className="px-6 py-4 text-right whitespace-nowrap space-x-3">
                     <button
                       onClick={() => blockNovelMutation.mutate({ id: novel.id, flagged: novel.flagged })}
-                      className={`text-xs font-bold ${novel.flagged ? 'text-green-600' : 'text-red-600'} hover:underline`}
+                      className={`text-xs font-bold ${novel.flagged ? 'text-green-600 hover:text-green-800' : 'text-orange-600 hover:text-orange-800'} transition`}
                     >
-                      {novel.flagged ? 'Розблокувати' : 'Заблокувати'}
+                      {novel.flagged ? 'Розблокувати' : 'Приховати'}
+                    </button>
+
+                    <button
+                      onClick={() => {
+                        if (window.confirm(`Видалити новелу "${novel.title}" назавжди? Усі її розділи та коментарі будуть знищені!`)) {
+                          deleteNovelMutation.mutate(novel.id);
+                        }
+                      }}
+                      className="text-xs font-bold text-red-600 hover:text-red-800 transition"
+                    >
+                      Видалити
                     </button>
                   </td>
                 </tr>

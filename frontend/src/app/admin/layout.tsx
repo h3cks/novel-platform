@@ -10,9 +10,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const navItems = [
     { name: 'Дашборд', path: '/admin' },
     { name: 'Користувачі', path: '/admin/users' },
-    { name: 'Контент', path: '/admin/content' }, // Додано в попередньому кроці
+    { name: 'Контент', path: '/admin/content' },
     { name: 'Репорти', path: '/admin/reports' },
-    { name: 'Розсилка', path: '/admin/broadcast' }, // Додано зараз
+    { name: 'Розсилка', path: '/admin/broadcast' },
+    { name: 'Логи дій', path: '/admin/logs' }, // Додано сюди
   ];
 
   return (

@@ -55,6 +55,8 @@ model User {
 
   processedReports Report[] @relation("ProcessedBy")
 
+  auditLogs AuditLog[] @relation("AuditActor")
+
   notifications Notification[]
 
   following UserFollow[] @relation("Follower")
@@ -213,11 +215,11 @@ model ViewHistory {
   chapter   Chapter? @relation(fields: [chapterId], references: [id])
   viewedAt  DateTime @default(now())
 
-
   @@index([novelId])
   @@index([chapterId])
   @@index([userId])
 }
+
 model Report {
   id         Int      @id @default(autoincrement())
   reporterId Int
@@ -239,6 +241,24 @@ model Report {
   @@index([targetType, targetId])
   @@index([status])
   @@index([reporterId])
+}
+
+model AuditLog {
+  id      Int  @id @default(autoincrement())
+  actorId Int
+  actor   User @relation("AuditActor", fields: [actorId], references: [id])
+
+  action     String
+  targetType String
+  targetId   Int
+  reason     String?
+  details    String?
+
+  createdAt DateTime @default(now())
+
+  @@index([actorId])
+  @@index([targetType, targetId])
+  @@index([createdAt])
 }
 
 model Notification {

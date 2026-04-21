@@ -19,8 +19,21 @@ export const adminService = {
     return data.data;
   },
 
-  getUsers: async (page = 1, limit = 20): Promise<AdminUsersResponse> => {
-    const { data } = await apiClient.get(`/admin/users?page=${page}&limit=${limit}`);
+  getAuditLogs: async (page = 1, limit = 30) => {
+    const { data } = await apiClient.get(`/admin/audit-logs?page=${page}&limit=${limit}`);
+    return data.data;
+  },
+
+  getUsers: async (page = 1, limit = 20, search = '', role = 'ALL'): Promise<AdminUsersResponse> => {
+    const params = new URLSearchParams({
+      page: page.toString(),
+      limit: limit.toString(),
+    });
+
+    if (search) params.append('search', search);
+    if (role && role !== 'ALL') params.append('role', role);
+
+    const { data } = await apiClient.get(`/admin/users?${params.toString()}`);
     return data.data;
   },
 
@@ -29,8 +42,8 @@ export const adminService = {
     return data.data;
   },
 
-  blockUser: async (userId: number, reason: string): Promise<void> => {
-    await apiClient.post(`/admin/users/${userId}/block`, { reason });
+  blockUser: async (userId: number, isBlocked: boolean, reason: string): Promise<void> => {
+    await apiClient.post(`/admin/users/${userId}/block`, { isBlocked, reason });
   },
 
   changeRole: async (userId: number, role: string): Promise<void> => {
@@ -58,6 +71,14 @@ export const adminService = {
     return data.data;
   },
 
+  deleteUser: async (userId: number): Promise<void> => {
+    await apiClient.delete(`/admin/users/${userId}`);
+  },
+
+  deleteNovel: async (novelId: number): Promise<void> => {
+    await apiClient.delete(`/admin/novels/${novelId}`);
+  },
+
   getGenres: async () => {
     const { data } = await apiClient.get('/admin/genres');
     return data.data;
@@ -76,4 +97,5 @@ export const adminService = {
     const { data } = await apiClient.get(`/admin/novels/${id}/detail`);
     return data.data;
   }
+
 };

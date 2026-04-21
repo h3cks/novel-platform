@@ -22,16 +22,37 @@ export const getStats = asyncHandler(async (req: Request, res: Response) => {
 
 export const getUsers = asyncHandler(async (req: Request, res: Response) => {
   const page = parseInt(req.query.page as string) || 1;
-  const limit = parseInt(req.query.limit as string) || 20;
+  let limit = parseInt(req.query.limit as string) || 20;
+
+  // Захист від зловживань (обмежуємо максимальний ліміт)
+  if (limit > 100) limit = 100;
+
   const skip = (page - 1) * limit;
+  const search = req.query.search as string;
+  const role = req.query.role as string;
+
+  const whereClause: any = {};
+
+  if (search) {
+    whereClause.OR = [
+      { username: { contains: search, mode: 'insensitive' } },
+      { email: { contains: search, mode: 'insensitive' } }
+    ];
+  }
+
+  if (role && role !== 'ALL') {
+    whereClause.role = role;
+  }
 
   const [users, total] = await Promise.all([
     prisma.user.findMany({
-      skip, take: limit,
-      // ДОДАТИ isBlocked та lastActive у вибірку
-      select: { id: true, username: true, email: true, role: true, isBlocked: true, lastActive: true }
+      where: whereClause,
+      skip,
+      take: limit,
+      select: { id: true, username: true, email: true, role: true, isBlocked: true, lastActive: true },
+      orderBy: { createdAt: 'desc' }
     }),
-    prisma.user.count()
+    prisma.user.count({ where: whereClause })
   ]);
 
   res.status(200).json({ success: true, data: { users, total } });
@@ -97,7 +118,7 @@ export const getUserDetail = asyncHandler(async (req: Request, res: Response) =>
 export const changeRole = asyncHandler(async (req: Request, res: Response) => {
   const { userId } = req.params;
   const { role } = req.body;
-  const currentUser = (req as any).user;
+  const currentUser = (req as any).user; // Той, хто робить запит
 
   const validRoles = ['READER', 'AUTHOR', 'MODERATOR', 'ADMIN'];
   if (!validRoles.includes(role)) {
@@ -108,42 +129,62 @@ export const changeRole = asyncHandler(async (req: Request, res: Response) => {
     where: { id: Number(userId) }
   });
 
-  if (!userToChange) {
-    return res.status(404).json({ success: false, message: "Користувача не знайдено" });
+  if (!userToChange) return res.status(404).json({ success: false, message: "Користувача не знайдено" });
+
+  if (currentUser.role === 'MODERATOR' && (role === 'ADMIN' || role === 'MODERATOR' || userToChange.role === 'ADMIN' || userToChange.role === 'MODERATOR')) {
+    return res.status(403).json({ success: false, message: "Недостатньо прав для управління привілейованими ролями" });
   }
 
-  if (currentUser.role === 'MODERATOR' && (role === 'ADMIN' || userToChange.role === 'ADMIN')) {
-    return res.status(403).json({ success: false, message: "Недостатньо прав" });
-  }
-
+  // Оновлюємо роль
   const updatedUser = await prisma.user.update({
     where: { id: Number(userId) },
     data: { role }
   });
 
+  // ЗАПИСУЄМО В ЛОГ
+  await prisma.auditLog.create({
+    data: {
+      actorId: currentUser.id,
+      action: 'CHANGE_ROLE',
+      targetType: 'USER',
+      targetId: updatedUser.id,
+      details: JSON.stringify({ oldRole: userToChange.role, newRole: updatedUser.role })
+    }
+  });
+
   res.status(200).json({ success: true, data: updatedUser });
 });
 
-// Тепер функція блокування працює реально!
+
 export const blockUser = asyncHandler(async (req: Request, res: Response) => {
   const { userId } = req.params;
-  const adminId = (req as any).user.id;
+  const { isBlocked, reason } = req.body;
+  const currentUser = (req as any).user;
 
-  if (Number(userId) === adminId) {
+  if (Number(userId) === currentUser.id) {
     return res.status(400).json({ success: false, message: "Ви не можете заблокувати себе." });
   }
 
-  // Отримуємо поточний стан юзера
   const user = await prisma.user.findUnique({ where: { id: Number(userId) } });
   if (!user) return res.status(404).json({ success: false, message: "Користувача не знайдено" });
 
-  // Перемикаємо стан (заблокувати/розблокувати)
   await prisma.user.update({
     where: { id: Number(userId) },
-    data: { isBlocked: !user.isBlocked }
+    data: { isBlocked }
   });
 
-  res.status(200).json({ success: true, message: user.isBlocked ? "Розблоковано" : "Заблоковано" });
+  // ЗАПИСУЄМО В ЛОГ
+  await prisma.auditLog.create({
+    data: {
+      actorId: currentUser.id,
+      action: isBlocked ? 'BLOCK_USER' : 'UNBLOCK_USER',
+      targetType: 'USER',
+      targetId: user.id,
+      reason: reason || (isBlocked ? 'Порушення правил' : 'Схвалено адміністратором')
+    }
+  });
+
+  res.status(200).json({ success: true, message: isBlocked ? "Заблоковано" : "Розблоковано" });
 });
 
 /**
@@ -263,7 +304,8 @@ export const sendBroadcast = asyncHandler(async (req: Request, res: Response) =>
 // Додайте getNovels до списку експорту на початку файлу та реалізацію внизу
 export const getNovels = asyncHandler(async (req: Request, res: Response) => {
   const page = parseInt(req.query.page as string) || 1;
-  const limit = parseInt(req.query.limit as string) || 20;
+  let limit = parseInt(req.query.limit as string) || 20;
+  if (limit > 100) limit = 100;
   const skip = (page - 1) * limit;
 
   const [novels, total] = await Promise.all([
@@ -335,4 +377,64 @@ export const getAdminNovelDetail = asyncHandler(async (req: Request, res: Respon
   });
 
   res.status(200).json({ success: true, data: { ...novel, reports } });
+});
+
+/**
+ * Повне (фізичне) видалення користувача
+ */
+export const deleteUser = asyncHandler(async (req: Request, res: Response) => {
+  const { userId } = req.params;
+  const adminId = (req as any).user.id;
+
+  if (Number(userId) === adminId) {
+    return res.status(400).json({ success: false, message: "Ви не можете видалити власний акаунт." });
+  }
+
+  const user = await prisma.user.findUnique({ where: { id: Number(userId) } });
+  if (!user) return res.status(404).json({ success: false, message: "Користувача не знайдено" });
+
+  // Фізичне видалення з бази
+  await prisma.user.delete({
+    where: { id: Number(userId) }
+  });
+
+  res.status(200).json({ success: true, message: "Користувача та всі його дані успішно видалено" });
+});
+
+/**
+ * Повне (фізичне) видалення новели
+ */
+export const deleteNovel = asyncHandler(async (req: Request, res: Response) => {
+  const { novelId } = req.params;
+
+  const novel = await prisma.novel.findUnique({ where: { id: Number(novelId) } });
+  if (!novel) return res.status(404).json({ success: false, message: "Новелу не знайдено" });
+
+  // Фізичне видалення новели
+  await prisma.novel.delete({
+    where: { id: Number(novelId) }
+  });
+
+  res.status(200).json({ success: true, message: "Новелу успішно видалено" });
+});
+
+
+export const getAuditLogs = asyncHandler(async (req: Request, res: Response) => {
+  const page = parseInt(req.query.page as string) || 1;
+  const limit = parseInt(req.query.limit as string) || 30;
+  const skip = (page - 1) * limit;
+
+  const [logs, total] = await Promise.all([
+    prisma.auditLog.findMany({
+      skip,
+      take: limit,
+      include: {
+        actor: { select: { id: true, username: true, role: true } }
+      },
+      orderBy: { createdAt: 'desc' }
+    }),
+    prisma.auditLog.count()
+  ]);
+
+  res.status(200).json({ success: true, data: { logs, total } });
 });
