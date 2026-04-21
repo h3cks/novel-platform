@@ -30,5 +30,25 @@ export const adminService = {
 
   changeRole: async (userId: number, role: string): Promise<void> => {
     await apiClient.patch(`/admin/users/${userId}/role`, { role });
+  },
+
+  deleteUser: async (userId: number): Promise<void> => {
+    await apiClient.delete(`/profile/${userId}`);
+  },
+
+  blockNovel: async (novelId: number, reason: string): Promise<void> => {
+    await apiClient.post(`/admin/novels/${novelId}/block`, { reason });
+  },
+
+  createGenre: async (name: string, description?: string): Promise<void> => {
+    await apiClient.post('/admin/genres', { name, description });
+  },
+
+  createTag: async (name: string): Promise<void> => {
+    await apiClient.post('/admin/tags', { name });
+  },
+
+  sendBroadcast: async (title: string, message: string): Promise<void> => {
+    await apiClient.post('/admin/broadcast', { title, message });
   }
 };

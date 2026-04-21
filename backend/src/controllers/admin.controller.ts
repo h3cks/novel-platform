@@ -72,3 +72,87 @@ export const blockUser = asyncHandler(async (req: Request, res: Response) => {
   res.status(200).json({ success: true, message: user.isBlocked ? "Розблоковано" : "Заблоковано" });
 });
 
+/**
+ * Блокування/Розблокування новели
+ */
+export const blockNovel = asyncHandler(async (req: Request, res: Response) => {
+  const { novelId } = req.params;
+
+  const novel = await prisma.novel.findUnique({ where: { id: Number(novelId) } });
+  if (!novel) return res.status(404).json({ success: false, message: "Новелу не знайдено" });
+
+  const updatedNovel = await prisma.novel.update({
+    where: { id: Number(novelId) },
+    data: { flagged: !novel.flagged }
+  });
+
+  res.status(200).json({
+    success: true,
+    message: updatedNovel.flagged ? "Новелу заблоковано" : "Новелу розблоковано"
+  });
+});
+
+/**
+ * Створення нового жанру
+ */
+export const createGenre = asyncHandler(async (req: Request, res: Response) => {
+  const { name, description } = req.body;
+
+  if (!name) return res.status(400).json({ success: false, message: "Назва жанру обов'язкова" });
+
+  const genre = await prisma.genre.create({
+    data: { name, description }
+  });
+
+  res.status(201).json({ success: true, data: genre });
+});
+
+/**
+ * Створення нового тегу
+ */
+export const createTag = asyncHandler(async (req: Request, res: Response) => {
+  const { name } = req.body;
+
+  if (!name) return res.status(400).json({ success: false, message: "Назва тегу обов'язкова" });
+
+  const tag = await prisma.tag.create({
+    data: { name }
+  });
+
+  res.status(201).json({ success: true, data: tag });
+});
+
+/**
+ * Масова розсилка сповіщень усім користувачам
+ */
+export const sendBroadcast = asyncHandler(async (req: Request, res: Response) => {
+  const { title, message } = req.body;
+
+  if (!title || !message) {
+    return res.status(400).json({ success: false, message: "Заголовок та текст повідомлення обов'язкові" });
+  }
+
+  // Отримуємо ID всіх активних користувачів
+  const users = await prisma.user.findMany({
+    where: { isBlocked: false },
+    select: { id: true }
+  });
+
+  // Створюємо сповіщення для кожного користувача
+  if (users.length > 0) {
+    await prisma.notification.createMany({
+      data: users.map(user => ({
+        userId: user.id,
+        title,
+        message,
+        type: 'SYSTEM', // Тип сповіщення для ідентифікації системних розсилок
+      }))
+    });
+  }
+
+  res.status(200).json({
+    success: true,
+    message: `Розсилку успішно відправлено ${users.length} користувачам`
+  });
+});
+

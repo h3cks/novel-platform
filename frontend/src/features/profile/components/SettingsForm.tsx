@@ -48,6 +48,9 @@ export const SettingsForm = () => {
       setIsPasswordModalOpen(false);
       setPasswordData({ oldPassword: '', newPassword: '', confirmPassword: '' });
       setTimeout(() => setSuccessMessage(''), 3000);
+    },
+    onError: () => {
+      setPasswordData({ oldPassword: '', newPassword: '', confirmPassword: '' }); // Очищаємо поля при помилці для безпеки
     }
   });
 
@@ -80,7 +83,6 @@ export const SettingsForm = () => {
     }
   }, [isSuccess]);
 
-  // ВИПРАВЛЕННЯ ТУТ: Створюємо окрему функцію для сабміту головної форми
   const onSubmitProfile = (data: SettingsFormValues) => {
     updateProfile(data);
   };
@@ -108,7 +110,6 @@ export const SettingsForm = () => {
   return (
     <div className="max-w-2xl mx-auto space-y-8 pb-12">
 
-      {/* ВИПРАВЛЕННЯ ТУТ: Передаємо onSubmitProfile у handleSubmit */}
       <form onSubmit={handleSubmit(onSubmitProfile)} className="bg-white p-6 md:p-8 rounded-xl shadow-sm border border-gray-100">
         <div className="flex justify-between items-center mb-6 pb-4 border-b border-gray-100">
           <h2 className="text-2xl font-bold text-gray-900">Налаштування профілю</h2>
@@ -116,7 +117,7 @@ export const SettingsForm = () => {
         </div>
 
         {successMessage && (
-          <div className="mb-6 p-4 bg-green-50 text-green-700 rounded-md border border-green-200">
+          <div className="mb-6 p-4 bg-green-50 text-green-700 rounded-md border border-green-200 font-medium">
             {successMessage}
           </div>
         )}
@@ -163,7 +164,7 @@ export const SettingsForm = () => {
         </div>
       </form>
 
-      {/* Компактна секція Безпеки */}
+      {/* Секція Безпеки */}
       <div className="bg-white p-6 md:p-8 rounded-xl shadow-sm border border-gray-100">
         <h3 className="text-xl font-bold text-gray-900 mb-6">Безпека</h3>
 
@@ -181,8 +182,8 @@ export const SettingsForm = () => {
                 )}
               </div>
               {!profile?.emailConfirmed && (
-                <button type="button" onClick={() => profile?.email && resendEmail(profile.email)} className="text-xs text-blue-600 hover:underline mt-2">
-                  Надіслати лист ще раз
+                <button type="button" onClick={() => profile?.email && resendEmail(profile.email)} disabled={isResending} className="text-xs text-blue-600 hover:underline mt-2 disabled:opacity-50">
+                  {isResending ? 'Відправлення...' : 'Надіслати лист ще раз'}
                 </button>
               )}
             </div>
@@ -214,10 +215,10 @@ export const SettingsForm = () => {
       <div className="bg-red-50 p-6 md:p-8 rounded-xl shadow-sm border border-red-100 mt-8">
         <h3 className="text-xl font-bold text-red-800 mb-2">Небезпечна зона</h3>
         <p className="text-sm text-red-600 mb-6">Видалення акаунта є незворотною дією. Усі ваші дані будуть видалені назавжди.</p>
-        {(deleteError as any) && <p className="text-red-500 text-sm mb-4">{(deleteError as any).response?.data?.message || 'Помилка'}</p>}
+        {(deleteError as any) && <p className="text-red-500 text-sm mb-4">{(deleteError as any).response?.data?.message || 'Помилка видалення'}</p>}
         <button
           type="button"
-          onClick={() => { if (window.confirm('Ви впевнені? Це незворотно.')) deleteAccount(); }}
+          onClick={() => { if (window.confirm('Ви впевнені? Це незворотно і всі ваші новели/коментарі можуть бути видалені.')) deleteAccount(); }}
           disabled={isDeleting}
           className="bg-red-600 text-white px-6 py-2.5 rounded-md font-semibold hover:bg-red-700 disabled:opacity-50 transition-colors"
         >
@@ -244,7 +245,7 @@ export const SettingsForm = () => {
                   placeholder="new@example.com"
                 />
               </div>
-              {(emailError as any) && <p className="text-red-500 text-sm">{(emailError as any).response?.data?.message || 'Помилка'}</p>}
+              {(emailError as any) && <p className="text-red-500 text-sm">{(emailError as any).response?.data?.message || 'Помилка зміни пошти'}</p>}
               <div className="flex gap-3 justify-end mt-6">
                 <button type="button" onClick={() => setIsEmailModalOpen(false)} className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-md font-medium transition-colors">Скасувати</button>
                 <button type="submit" disabled={isEmailChanging || !emailData.newEmail} className="bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700 disabled:opacity-50 font-medium transition-colors">
@@ -277,7 +278,7 @@ export const SettingsForm = () => {
                 <input
                   type="password"
                   required
-                  minLength={6}
+                  minLength={8}
                   value={passwordData.newPassword}
                   onChange={(e) => setPasswordData({ ...passwordData, newPassword: e.target.value })}
                   className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 outline-none"
@@ -288,13 +289,13 @@ export const SettingsForm = () => {
                 <input
                   type="password"
                   required
-                  minLength={6}
+                  minLength={8}
                   value={passwordData.confirmPassword}
                   onChange={(e) => setPasswordData({ ...passwordData, confirmPassword: e.target.value })}
                   className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 outline-none"
                 />
               </div>
-              {(passwordError as any) && <p className="text-red-500 text-sm">{(passwordError as any).response?.data?.message || 'Помилка'}</p>}
+              {(passwordError as any) && <p className="text-red-500 text-sm">{(passwordError as any).response?.data?.message || 'Помилка зміни пароля'}</p>}
               <div className="flex gap-3 justify-end mt-6">
                 <button type="button" onClick={() => setIsPasswordModalOpen(false)} className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-md font-medium transition-colors">Скасувати</button>
                 <button type="submit" disabled={isPasswordChanging || !passwordData.oldPassword || !passwordData.newPassword} className="bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700 disabled:opacity-50 font-medium transition-colors">
