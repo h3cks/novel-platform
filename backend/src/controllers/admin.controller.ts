@@ -168,6 +168,9 @@ export const blockUser = asyncHandler(async (req: Request, res: Response) => {
   const user = await prisma.user.findUnique({ where: { id: Number(userId) } });
   if (!user) return res.status(404).json({ success: false, message: "Користувача не знайдено" });
 
+  if (currentUser.role === 'MODERATOR' && user.role === 'ADMIN') {
+    return res.status(403).json({ success: false, message: "Модератор не може застосовувати санкції до Адміністратора" });
+  }
   await prisma.user.update({
     where: { id: Number(userId) },
     data: { isBlocked }
@@ -199,6 +202,16 @@ export const blockNovel = asyncHandler(async (req: Request, res: Response) => {
   const updatedNovel = await prisma.novel.update({
     where: { id: Number(novelId) },
     data: { flagged: !novel.flagged }
+  });
+
+  await prisma.auditLog.create({
+    data: {
+      actorId: (req as any).user.id,
+      action: 'BLOCK_NOVEL',
+      targetType: 'NOVEL',
+      targetId: Number(novelId),
+      details: JSON.stringify({ title: novel.title })
+    }
   });
 
   res.status(200).json({
@@ -385,6 +398,7 @@ export const getAdminNovelDetail = asyncHandler(async (req: Request, res: Respon
 export const deleteUser = asyncHandler(async (req: Request, res: Response) => {
   const { userId } = req.params;
   const adminId = (req as any).user.id;
+  const currentUser = (req as any).user;
 
   if (Number(userId) === adminId) {
     return res.status(400).json({ success: false, message: "Ви не можете видалити власний акаунт." });
@@ -392,6 +406,20 @@ export const deleteUser = asyncHandler(async (req: Request, res: Response) => {
 
   const user = await prisma.user.findUnique({ where: { id: Number(userId) } });
   if (!user) return res.status(404).json({ success: false, message: "Користувача не знайдено" });
+
+  if (currentUser.role === 'MODERATOR' && user.role === 'ADMIN') {
+    return res.status(403).json({ success: false, message: "Модератор не може застосовувати санкції до Адміністратора" });
+  }
+
+  await prisma.auditLog.create({
+    data: {
+      actorId: (req as any).user.id,
+      action: 'DELETE_USER',
+      targetType: 'USER',
+      targetId: Number(userId),
+      details: JSON.stringify({ title: user.displayName })
+    }
+  });
 
   // Фізичне видалення з бази
   await prisma.user.delete({
@@ -413,6 +441,16 @@ export const deleteNovel = asyncHandler(async (req: Request, res: Response) => {
   // Фізичне видалення новели
   await prisma.novel.delete({
     where: { id: Number(novelId) }
+  });
+
+  await prisma.auditLog.create({
+    data: {
+      actorId: (req as any).user.id,
+      action: 'DELETE_NOVEL',
+      targetType: 'NOVEL',
+      targetId: Number(novelId),
+      details: JSON.stringify({ title: novel.title })
+    }
   });
 
   res.status(200).json({ success: true, message: "Новелу успішно видалено" });

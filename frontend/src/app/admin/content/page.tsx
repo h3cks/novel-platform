@@ -204,7 +204,30 @@ export default function AdminContentPage() {
               ))}
               </tbody>
             </table>
+
+
           )}
+
+          {/* Пагінація для Новел */}
+          <div className="flex justify-center items-center gap-4 py-4 border-t border-gray-100">
+            <button
+              disabled={page === 1 || novelsLoading}
+              onClick={() => setPage(p => p - 1)}
+              className="px-4 py-2 border border-gray-200 rounded-lg text-sm font-medium disabled:opacity-50 hover:bg-gray-50 transition-colors"
+            >
+              Назад
+            </button>
+              <span className="text-sm font-medium text-gray-600">
+                Сторінка {page} з {novelsData ? Math.max(1, Math.ceil(novelsData.total / limit)) : 1}
+              </span>
+              <button
+                disabled={!novelsData || page >= Math.ceil(novelsData.total / limit) || novelsLoading}
+                onClick={() => setPage(p => p + 1)}
+                className="px-4 py-2 border border-gray-200 rounded-lg text-sm font-medium disabled:opacity-50 hover:bg-gray-50 transition-colors"
+              >
+              Вперед
+            </button>
+          </div>
         </div>
       )}
 
