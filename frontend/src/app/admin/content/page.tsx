@@ -23,7 +23,7 @@ export default function AdminContentPage() {
 
   const blockNovelMutation = useMutation({
     mutationFn: ({ id, flagged }: { id: number; flagged: boolean }) =>
-      adminService.blockNovel(id, flagged ? 'unblock' : 'rule violation'),
+      adminService.blockNovel(id, !flagged, !flagged ? 'rule violation' : 'unblock'),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-novels'] });
       toast.success('Статус новели змінено');

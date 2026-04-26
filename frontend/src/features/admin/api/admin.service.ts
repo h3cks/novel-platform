@@ -50,8 +50,8 @@ export const adminService = {
     await apiClient.patch(`/admin/users/${userId}/role`, { role });
   },
 
-  blockNovel: async (novelId: number, reason: string): Promise<void> => {
-    await apiClient.post(`/admin/novels/${novelId}/block`, { reason });
+  blockNovel: async (novelId: number, isBlocked: boolean, reason: string): Promise<void> => {
+    await apiClient.post(`/admin/novels/${novelId}/block`, { isBlocked, reason });
   },
 
   createGenre: async (name: string, description?: string): Promise<void> => {
