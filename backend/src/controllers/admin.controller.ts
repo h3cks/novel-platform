@@ -195,29 +195,27 @@ export const blockUser = asyncHandler(async (req: Request, res: Response) => {
  */
 export const blockNovel = asyncHandler(async (req: Request, res: Response) => {
   const { novelId } = req.params;
+  const { isBlocked, reason } = req.body; // Додати читання body
 
   const novel = await prisma.novel.findUnique({ where: { id: Number(novelId) } });
   if (!novel) return res.status(404).json({ success: false, message: "Новелу не знайдено" });
 
   const updatedNovel = await prisma.novel.update({
     where: { id: Number(novelId) },
-    data: { flagged: !novel.flagged }
+    data: { flagged: isBlocked } // Встановлюємо конкретний статус
   });
 
   await prisma.auditLog.create({
     data: {
       actorId: (req as any).user.id,
-      action: 'BLOCK_NOVEL',
+      action: isBlocked ? 'BLOCK_NOVEL' : 'UNBLOCK_NOVEL',
       targetType: 'NOVEL',
       targetId: Number(novelId),
+      reason: reason || 'Порушення правил',
       details: JSON.stringify({ title: novel.title })
     }
   });
-
-  res.status(200).json({
-    success: true,
-    message: updatedNovel.flagged ? "Новелу заблоковано" : "Новелу розблоковано"
-  });
+  res.status(200).json({ success: true, message: isBlocked ? "Заблоковано" : "Розблоковано" });
 });
 
 export const createGenre = asyncHandler(async (req: Request, res: Response) => {
