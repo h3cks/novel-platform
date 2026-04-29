@@ -9,8 +9,8 @@ export interface User {
   role: UserRole;
   emailConfirmed: boolean;
   createdAt: string;
-  isBlocked: boolean | false;
-  lastActive: Date | null;
+  isBlocked: boolean;
+  lastActive: string | null;
 }
 
 export interface AuthResponse {

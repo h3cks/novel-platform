@@ -1,8 +1,11 @@
+// src/features/comments/components/CommentSection.tsx
 'use client';
 
+import { useState } from 'react';
 import { useComments } from '../hooks/useComments';
 import { CommentForm } from './CommentForm';
 import { CommentItem } from './CommentItem';
+import { ReportModal } from '@/features/reports/components/ReportModal';
 
 interface CommentSectionProps {
   novelId?: string;
@@ -11,6 +14,9 @@ interface CommentSectionProps {
 
 export const CommentSection = ({ novelId, chapterId }: CommentSectionProps) => {
   const { data: comments, isLoading, isError } = useComments({ novelId, chapterId });
+
+  // ДОДАНО: Стан для єдиної модалки на всю секцію
+  const [reportTargetId, setReportTargetId] = useState<number | null>(null);
 
   return (
     <div className="w-full max-w-4xl mx-auto py-8">
@@ -30,7 +36,6 @@ export const CommentSection = ({ novelId, chapterId }: CommentSectionProps) => {
               <div className="flex-1 space-y-2 py-1">
                 <div className="h-4 bg-gray-200 rounded w-1/4"></div>
                 <div className="h-4 bg-gray-200 rounded w-full"></div>
-                <div className="h-4 bg-gray-200 rounded w-5/6"></div>
               </div>
             </div>
           ))}
@@ -51,7 +56,6 @@ export const CommentSection = ({ novelId, chapterId }: CommentSectionProps) => {
 
       {comments && comments.length > 0 && (
         <div className="space-y-8">
-          {/* Фільтруємо коментарі верхнього рівня (у яких немає parentId) */}
           {comments
             .filter((c) => !c.parentId)
             .map((comment) => (
@@ -60,9 +64,19 @@ export const CommentSection = ({ novelId, chapterId }: CommentSectionProps) => {
                 comment={comment}
                 novelId={novelId}
                 chapterId={chapterId}
+                onReport={(id) => setReportTargetId(id)} // Передаємо функцію вниз
               />
             ))}
         </div>
+      )}
+
+      {reportTargetId && (
+        <ReportModal
+          isOpen={!!reportTargetId}
+          onClose={() => setReportTargetId(null)}
+          targetId={reportTargetId}
+          targetType="COMMENT"
+        />
       )}
     </div>
   );

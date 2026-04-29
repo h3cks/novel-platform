@@ -12,12 +12,11 @@ interface ChapterPageProps {
   };
 }
 
-export default function ChapterPage({ params }: ChapterPageProps) {
-  // Тут ми просто викликаємо ReaderView. Вся логіка (теми, запити) - клієнтська.
+export default async function ChapterPage({ params }: ChapterPageProps) {
+  const { id, chapterId } = await params;
+
   return (
     <div className="-mx-4 -my-8 sm:-mx-0">
-      {/* Негативні марджини використовуються для того, щоб перекрити паддінги з layout.tsx
-          і дозволити фону сепії/темної теми зайняти всю ширину на мобільних */}
       <ReaderView novelId={params.id} chapterId={params.chapterId} />
     </div>
   );

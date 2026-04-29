@@ -30,7 +30,13 @@ export const ProfileHeader = ({ profile }: ProfileHeaderProps) => {
 
       <div className="relative z-10 flex flex-col md:flex-row items-center md:items-start gap-8">
         <div className="w-32 h-32 md:w-40 md:h-40 shrink-0 rounded-full overflow-hidden border-4 border-white shadow-xl bg-slate-50">
-          <img src={avatarLetter} alt={profile.username} className="w-full h-full object-cover" />
+          {profile.avatarUrl ? (
+            <img src={profile.avatarUrl} alt={profile.username} className="w-full h-full object-cover" />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center text-5xl font-bold text-slate-400">
+              {avatarLetter}
+            </div>
+          )}
         </div>
 
         <div className="flex-1 text-center md:text-left pt-2">

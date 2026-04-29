@@ -11,12 +11,15 @@ import Link from 'next/link';
 import { useMutation } from '@tanstack/react-query';
 import { authService } from '@/features/auth/api/auth.service';
 import { profileService } from '../api/profile.service';
+import { useAuthStore } from '@/features/auth/store/useAuthStore';
 
 export const SettingsForm = () => {
   const { data: profile, isLoading: isProfileLoading, refetch } = useProfile();
   const { mutate: updateProfile, isPending: isUpdating, isSuccess, error } = useUpdateProfile();
 
   const [successMessage, setSuccessMessage] = useState('');
+  const [localError, setLocalError] = useState('');
+  const logout = useAuthStore((state) => state.logout);
 
   // Стани для модальних вікон
   const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
@@ -32,10 +35,10 @@ export const SettingsForm = () => {
   });
 
   // Мутація видалення
-  const { mutate: deleteAccount, isPending: isDeleting, error: deleteError } = useMutation({
+  const { mutate: deleteAccount, isPending: isDeleting } = useMutation({
     mutationFn: () => profileService.deleteProfile(),
     onSuccess: () => {
-      localStorage.removeItem('auth-storage');
+      logout();
       window.location.href = '/';
     }
   });
@@ -47,10 +50,9 @@ export const SettingsForm = () => {
       setSuccessMessage('Пароль успішно змінено!');
       setIsPasswordModalOpen(false);
       setPasswordData({ oldPassword: '', newPassword: '', confirmPassword: '' });
-      setTimeout(() => setSuccessMessage(''), 3000);
     },
     onError: () => {
-      setPasswordData({ oldPassword: '', newPassword: '', confirmPassword: '' }); // Очищаємо поля при помилці для безпеки
+      setPasswordData(prev => ({ ...prev, oldPassword: '' }));
     }
   });
 
@@ -90,9 +92,10 @@ export const SettingsForm = () => {
   const handlePasswordSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (passwordData.newPassword !== passwordData.confirmPassword) {
-      alert("Нові паролі не співпадають!");
+      setLocalError("Нові паролі не співпадають!");
       return;
     }
+    setLocalError('');
     changePassword({ oldPassword: passwordData.oldPassword, newPassword: passwordData.newPassword });
   };
 
@@ -104,6 +107,8 @@ export const SettingsForm = () => {
     }
     changeEmail({ newEmail: emailData.newEmail });
   };
+
+
 
   if (isProfileLoading) return <div className="p-8 text-center text-gray-500 animate-pulse">Завантаження налаштувань...</div>;
 
@@ -215,7 +220,6 @@ export const SettingsForm = () => {
       <div className="bg-red-50 p-6 md:p-8 rounded-xl shadow-sm border border-red-100 mt-8">
         <h3 className="text-xl font-bold text-red-800 mb-2">Небезпечна зона</h3>
         <p className="text-sm text-red-600 mb-6">Видалення акаунта є незворотною дією. Усі ваші дані будуть видалені назавжди.</p>
-        {(deleteError as any) && <p className="text-red-500 text-sm mb-4">{(deleteError as any).response?.data?.message || 'Помилка видалення'}</p>}
         <button
           type="button"
           onClick={() => { if (window.confirm('Ви впевнені? Це незворотно і всі ваші новели/коментарі можуть бути видалені.')) deleteAccount(); }}
@@ -295,7 +299,8 @@ export const SettingsForm = () => {
                   className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 outline-none"
                 />
               </div>
-              {(passwordError as any) && <p className="text-red-500 text-sm">{(passwordError as any).response?.data?.message || 'Помилка зміни пароля'}</p>}
+              {localError && <p className="text-red-500 text-sm font-medium">{localError}</p>}
+              {(passwordError as any) && <p className="text-red-500 text-sm font-medium">{(passwordError as any).response?.data?.message || 'Помилка зміни пароля'}</p>}
               <div className="flex gap-3 justify-end mt-6">
                 <button type="button" onClick={() => setIsPasswordModalOpen(false)} className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-md font-medium transition-colors">Скасувати</button>
                 <button type="submit" disabled={isPasswordChanging || !passwordData.oldPassword || !passwordData.newPassword} className="bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700 disabled:opacity-50 font-medium transition-colors">

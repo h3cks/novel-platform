@@ -2,11 +2,13 @@ import { User } from '../auth/types';
 
 export type ReportStatus = 'OPEN' | 'IN_PROGRESS' | 'RESOLVED' | 'DISMISSED' | 'ESCALATED';
 
+export type ReportTargetType = 'NOVEL' | 'CHAPTER' | 'COMMENT' | 'USER';
+
 export interface Report {
   id: number;
   reporterId: number;
   reporter: User;
-  targetType: string; // 'NOVEL', 'COMMENT', 'USER'
+  targetType: ReportTargetType;
   targetId: number;
   reason: string;
   detail: string | null;

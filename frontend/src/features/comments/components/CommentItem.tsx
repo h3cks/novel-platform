@@ -1,3 +1,4 @@
+// src/features/comments/components/CommentItem.tsx
 'use client';
 
 import { useState } from 'react';
@@ -11,9 +12,10 @@ interface CommentItemProps {
   comment: Comment;
   novelId?: string;
   chapterId?: string;
+  onReport: (id: number) => void; // ДОДАНО: пропс для виклику скарги
 }
 
-export const CommentItem = ({ comment, novelId, chapterId }: CommentItemProps) => {
+export const CommentItem = ({ comment, novelId, chapterId, onReport }: CommentItemProps) => {
   const { user } = useAuthStore();
   const queryClient = useQueryClient();
   const [isReplying, setIsReplying] = useState(false);
@@ -24,8 +26,9 @@ export const CommentItem = ({ comment, novelId, chapterId }: CommentItemProps) =
   const deleteMutation = useMutation({
     mutationFn: () => commentsService.deleteComment(comment.id),
     onSuccess: () => {
-      // Інвалідація запитів для оновлення списку коментарів
-      queryClient.invalidateQueries({ queryKey: ['comments'] });
+      queryClient.invalidateQueries({
+        queryKey: ['comments', { novelId, chapterId }]
+      });
     }
   });
 
@@ -62,6 +65,16 @@ export const CommentItem = ({ comment, novelId, chapterId }: CommentItemProps) =
               Відповісти
             </button>
 
+            {/* ВИКЛИКАЄМО ФУНКЦІЮ ЗАМІСТЬ ВІДКРИТТЯ ЛОКАЛЬНОЇ МОДАЛКИ */}
+            {user && user.id !== comment.userId && (
+              <button
+                onClick={() => onReport(comment.id)}
+                className="text-xs font-semibold text-gray-400 hover:text-red-500 transition opacity-0 group-hover:opacity-100"
+              >
+                Скаржитись
+              </button>
+            )}
+
             {canDelete && (
               <button
                 onClick={() => { if(confirm('Видалити коментар?')) deleteMutation.mutate(); }}
@@ -86,7 +99,7 @@ export const CommentItem = ({ comment, novelId, chapterId }: CommentItemProps) =
           </div>
         )}
 
-        {comment.replies && comment.replies.length > 0 && (
+        {Array.isArray(comment.replies) && comment.replies.length > 0 && (
           <div className="mt-4 space-y-4 pl-4 border-l-2 border-gray-100">
             {comment.replies.map(reply => (
               <CommentItem
@@ -94,6 +107,7 @@ export const CommentItem = ({ comment, novelId, chapterId }: CommentItemProps) =
                 comment={reply}
                 novelId={novelId}
                 chapterId={chapterId}
+                onReport={onReport}
               />
             ))}
           </div>

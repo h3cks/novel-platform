@@ -1,3 +1,4 @@
+// src/features/comments/api/comments.service.ts
 import { apiClient } from '@/lib/axios';
 import { Comment, CreateCommentDTO } from '../types';
 
@@ -10,34 +11,35 @@ interface GetCommentsParams {
 
 export const commentsService = {
   getComments: async (params: GetCommentsParams): Promise<Comment[]> => {
-    // Будуємо правильний RESTful URL залежно від наявних параметрів
     let url = '';
     if (params.novelId && params.chapterId) {
       url = `/novels/${params.novelId}/chapters/${params.chapterId}/comments`;
     } else if (params.novelId) {
       url = `/novels/${params.novelId}/comments`;
     } else {
-      return []; // Безпечний fallback, якщо параметри відсутні
+      return [];
     }
 
-    // Відправляємо тільки параметри пагінації (novelId/chapterId вже в URL)
     const { data } = await apiClient.get(url, {
       params: { page: params.page, limit: params.limit }
     });
 
-    // Безпечне розпакування масиву коментарів
     return data.data?.items || data.items || data.data || data || [];
   },
 
   createComment: async (payload: CreateCommentDTO): Promise<Comment> => {
     let url = '';
-    if (payload.novelId && payload.chapterId) {
-      url = `/novels/${payload.novelId}/chapters/${payload.chapterId}/comments`;
-    } else if (payload.novelId) {
-      url = `/novels/${payload.novelId}/comments`;
-    } else if (payload.parentId) {
-      // Якщо це просто відповідь на інший коментар без прив'язки до новели
+
+    if (payload.parentId) {
       url = `/comments/${payload.parentId}/replies`;
+    }
+
+    else if (payload.novelId && payload.chapterId) {
+      url = `/novels/${payload.novelId}/chapters/${payload.chapterId}/comments`;
+    }
+
+    else if (payload.novelId) {
+      url = `/novels/${payload.novelId}/comments`;
     } else {
       throw new Error('Invalid target for comment');
     }
