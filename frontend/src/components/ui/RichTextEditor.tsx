@@ -2,6 +2,7 @@
 
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
+import { useEffect } from 'react';
 
 interface RichTextEditorProps {
   content: string;
@@ -10,6 +11,7 @@ interface RichTextEditorProps {
 }
 
 export const RichTextEditor = ({ content, onChange, disabled = false }: RichTextEditorProps) => {
+
   const editor = useEditor({
     extensions: [StarterKit],
     content: content,
@@ -29,6 +31,12 @@ export const RichTextEditor = ({ content, onChange, disabled = false }: RichText
   if (!editor) {
     return <div className="min-h-[400px] bg-gray-50 border border-gray-200 rounded-md animate-pulse"></div>;
   }
+
+  useEffect(() => {
+    if (editor && editor.isEditable === disabled) {
+      editor.setEditable(!disabled);
+    }
+  }, [editor, disabled]);
 
   const ToolbarButton = ({
                            onClick,

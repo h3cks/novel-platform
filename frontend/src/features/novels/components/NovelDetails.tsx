@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -8,6 +8,8 @@ import { useAuthStore } from '@/features/auth/store/useAuthStore';
 import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
 import { libraryService } from '@/features/library/api/library.service';
 import { novelsService } from '../api/novels.service';
+import toast from 'react-hot-toast';
+import { ReportModal } from '@/features/reports/components/ReportModal';
 
 interface NovelDetailsProps {
   novelId: string | number;
@@ -15,9 +17,19 @@ interface NovelDetailsProps {
 
 export const NovelDetails = ({ novelId }: NovelDetailsProps) => {
   const { user } = useAuthStore();
+  const [isReportOpen, setIsReportOpen] = useState(false);
   const queryClient = useQueryClient();
   const router = useRouter();
   const [hoverRating, setHoverRating] = useState(0);
+  const [lastReadChapterId, setLastReadChapterId] = useState<string | null>(null);
+
+  useEffect(() => {
+    const savedProgress = localStorage.getItem(`novel_progress_${novelId}`);
+    if (savedProgress) {
+      setLastReadChapterId(savedProgress);
+    }
+  }, [novelId]);
+
 
   const { data: novel, isLoading: isNovelLoading } = useQuery({
     queryKey: ['novel', novelId],
@@ -43,16 +55,22 @@ export const NovelDetails = ({ novelId }: NovelDetailsProps) => {
   const rateMutation = useMutation({
     mutationFn: (score: number) => novelsService.rateNovel(novel!.id, score),
     onSuccess: () => {
-      alert('Оцінку враховано!');
+      toast.success('Оцінку враховано!');
       queryClient.invalidateQueries({ queryKey: ['novel', novel!.id] });
+    },
+    onError: () => {
+      toast.error('Не вдалося зберегти оцінку');
     }
   });
 
   const deleteNovelMutation = useMutation({
     mutationFn: () => novelsService.deleteNovel(novel!.id),
     onSuccess: () => {
-      alert('Новелу успішно видалено.');
+      toast.success('Новелу успішно видалено.');
       router.push('/novels');
+    },
+    onError: () => {
+      toast.error('Помилка при видаленні новели');
     }
   });
 
@@ -75,11 +93,27 @@ export const NovelDetails = ({ novelId }: NovelDetailsProps) => {
     : '0.0';
   const ratingCount = novel.ratings?.length || 0;
 
-  // ВИПРАВЛЕНО: читаємо з followers
   const bookmarksCount = novel._count?.followers || 0;
+
+  const hasChapters = novel.chapters && novel.chapters.length > 0;
+
+  const validLastRead = lastReadChapterId && novel.chapters?.some((c: any) => c.id.toString() === lastReadChapterId);
+  const targetChapterId = validLastRead ? lastReadChapterId : (novel.chapters?.[0]?.id || '');
+  const buttonText = validLastRead ? 'Продовжити читати' : 'Почати читати';
 
   return (
     <div className="bg-white rounded-3xl p-6 md:p-10 shadow-sm border border-slate-100 mb-8">
+      {user && (
+        <button
+          onClick={() => setIsReportOpen(true)}
+          className="absolute top-6 right-6 text-slate-400 hover:text-red-500 transition-colors p-2"
+          title="Поскаржитися на новелу"
+        >
+          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 21v-4m0 0V5a2 2 0 012-2h6.5l1 1H21l-3 6 3 6h-8.5l-1-1H5a2 2 0 00-2 2zm9-13.5V9" />
+          </svg>
+        </button>
+      )}
       <div className="flex flex-col md:flex-row gap-8 md:gap-12">
         <div className="flex-shrink-0 w-64 md:w-72 mx-auto md:mx-0">
           <div className="aspect-[2/3] relative rounded-2xl overflow-hidden shadow-lg border border-slate-200">
@@ -103,14 +137,21 @@ export const NovelDetails = ({ novelId }: NovelDetailsProps) => {
           )}
 
           <h1 className="text-3xl md:text-4xl font-black text-slate-900 mb-2 pr-32">{novel.title}</h1>
-          <p className="text-lg text-slate-600 mb-6 font-medium">Автор: <span className="text-indigo-600">{novel.author?.username || 'Невідомий'}</span></p>
+
+          <p className="text-lg text-slate-600 mb-6 font-medium">
+            Автор: <Link href={`/users/${novel.author?.id || ''}`} className="text-indigo-600 hover:underline">{novel.author?.username || 'Невідомий'}</Link>
+          </p>
 
           <div className="flex flex-wrap gap-2 mb-6">
             {novel.genres?.map((g: any) => (
-              <span key={g.genre.id} className="bg-indigo-50 text-indigo-700 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider">{g.genre.name}</span>
+              <Link key={g.genre.id} href={`/novels?genre=${g.genre.name}`} className="bg-indigo-50 text-indigo-700 hover:bg-indigo-100 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider transition-colors">
+                {g.genre.name}
+              </Link>
             ))}
             {novel.tags?.map((t: any) => (
-              <span key={t.tag.id} className="bg-slate-100 text-slate-600 px-3 py-1 rounded-full text-xs font-semibold">#{t.tag.name}</span>
+              <Link key={t.tag.id} href={`/novels?tag=${t.tag.name}`} className="bg-slate-100 text-slate-600 hover:bg-slate-200 px-3 py-1 rounded-full text-xs font-semibold transition-colors">
+                #{t.tag.name}
+              </Link>
             ))}
           </div>
 
@@ -142,8 +183,15 @@ export const NovelDetails = ({ novelId }: NovelDetailsProps) => {
           </div>
 
           <div className="flex flex-col sm:flex-row gap-3 mb-8">
-            <Link href={`/novels/${novel.id}/chapters/${novel.chapters?.[0]?.id || ''}`} className={`flex-1 text-center py-3.5 rounded-xl font-bold text-white transition-all ${novel.chapters?.length ? 'bg-indigo-600 hover:bg-indigo-700 shadow-md hover:shadow-lg' : 'bg-slate-300 pointer-events-none'}`}>
-              {novel.chapters?.length ? 'Почати читати' : 'Немає розділів'}
+            <Link
+              href={`/novels/${novel.id}/chapters/${targetChapterId}`}
+              className={`flex-1 text-center py-3.5 rounded-xl font-bold text-white transition-all ${
+                hasChapters
+                  ? 'bg-indigo-600 hover:bg-indigo-700 shadow-md hover:shadow-lg'
+                  : 'bg-slate-300 pointer-events-none'
+              }`}
+            >
+              {hasChapters ? buttonText : 'Немає розділів'}
             </Link>
             {user && (
               <button onClick={() => toggleBookmarkMutation.mutate()} disabled={toggleBookmarkMutation.isPending} className={`flex-1 py-3.5 rounded-xl font-bold border-2 transition-all ${isBookmarked ? 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100' : 'bg-white border-indigo-200 text-indigo-600 hover:bg-indigo-50 hover:border-indigo-600'}`}>
@@ -184,6 +232,12 @@ export const NovelDetails = ({ novelId }: NovelDetailsProps) => {
           </div>
         )}
       </div>
+      <ReportModal
+        isOpen={isReportOpen}
+        onClose={() => setIsReportOpen(false)}
+        targetId={novel.id}
+        targetType="NOVEL"
+      />
     </div>
   );
 };

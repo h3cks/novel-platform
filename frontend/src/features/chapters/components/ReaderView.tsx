@@ -11,6 +11,7 @@ import { chaptersService } from '../api/chapters.service';
 import { libraryService } from '@/features/library/api/library.service';
 import { ReaderSettings } from './ReaderSettings';
 import { CommentSection } from '@/features/comments/components/CommentSection';
+import { ReportModal } from '@/features/reports/components/ReportModal';
 import DOMPurify from 'dompurify';
 
 interface ReaderViewProps {
@@ -21,10 +22,10 @@ interface ReaderViewProps {
 export const ReaderView = ({ novelId, chapterId }: ReaderViewProps) => {
   const router = useRouter();
   const { user } = useAuthStore();
+  const [isReportOpen, setIsReportOpen] = useState(false);
   const { data: chapter, isLoading, isError } = useChapter(novelId, chapterId);
   const { fontSize, theme } = useReaderStore();
   const [mounted, setMounted] = useState(false);
-  const [cleanContent, setCleanContent] = useState<string>('');
 
   const { data: allChapters } = useQuery({
     queryKey: ['chapters', novelId],
@@ -39,17 +40,6 @@ export const ReaderView = ({ novelId, chapterId }: ReaderViewProps) => {
     }
   });
 
-  useEffect(() => {
-    setMounted(true);
-    if (chapter?.content) {
-      setCleanContent(DOMPurify.sanitize(chapter.content));
-    }
-
-    // ДОДАНО: Запис в історію при завантаженні розділу
-    if (chapter && user) {
-      libraryService.recordHistory(novelId, chapterId).catch(console.error);
-    }
-  }, [chapter, novelId, chapterId, user]);
 
   if (isLoading) {
     return (
@@ -111,6 +101,19 @@ export const ReaderView = ({ novelId, chapterId }: ReaderViewProps) => {
               </select>
             )}
 
+            {user && (
+              <button
+                onClick={() => setIsReportOpen(true)}
+                className="px-3 py-1.5 text-slate-500 hover:bg-slate-100 dark:hover:bg-white/10 rounded-lg text-sm font-medium transition flex-shrink-0 flex items-center gap-1"
+                title="Повідомити про помилку"
+              >
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+                <span className="hidden sm:inline">Скарга</span>
+              </button>
+            )}
+
             {canDelete && (
               <button
                 onClick={() => { if(confirm('Ви впевнені, що хочете видалити розділ?')) deleteChapterMutation.mutate(); }}
@@ -133,7 +136,7 @@ export const ReaderView = ({ novelId, chapterId }: ReaderViewProps) => {
           <div
             className="prose prose-lg max-w-none prose-headings:font-bold reader-content leading-relaxed"
             style={{ fontSize: mounted ? `${fontSize}px` : '18px' }}
-            dangerouslySetInnerHTML={{ __html: cleanContent }}
+            dangerouslySetInnerHTML={{ __html: chapter.content }}
           />
         </article>
 
@@ -152,6 +155,12 @@ export const ReaderView = ({ novelId, chapterId }: ReaderViewProps) => {
         </div>
 
         <CommentSection chapterId={chapterId} />
+        <ReportModal
+          isOpen={isReportOpen}
+          onClose={() => setIsReportOpen(false)}
+          targetId={chapterId}
+          targetType="CHAPTER"
+        />
       </div>
     </div>
   );

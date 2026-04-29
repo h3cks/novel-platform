@@ -29,23 +29,24 @@ export const TagAutocomplete = ({ selectedTags, onChange, max = 20, disabled }: 
 
   // Пошук тегів з бекенду (Debounce імітація)
   useEffect(() => {
-    if (!query.trim()) {
-      setResults([]);
-      return;
-    }
+    if (!query.trim()) { setResults([]); return; }
+    const controller = new AbortController(); // Додаємо контролер
     const timer = setTimeout(async () => {
       setIsLoading(true);
       try {
-        const { data } = await apiClient.get('/meta/tags', { params: { query, limit: 10 } });
+        const { data } = await apiClient.get('/meta/tags', {
+          params: { query, limit: 10 },
+          signal: controller.signal // Передаємо сигнал
+        });
         setResults(data.data.items || []);
         setIsOpen(true);
-      } catch (e) {
-        console.error(e);
+      } catch (e: any) {
+        if (e.name !== 'CanceledError') console.error(e); // Ігноруємо скасовані запити
       } finally {
         setIsLoading(false);
       }
-    }, 300); // 300ms debounce
-    return () => clearTimeout(timer);
+    }, 300);
+    return () => { clearTimeout(timer); controller.abort(); }; // Скасовуємо при новому вводі
   }, [query]);
 
   const handleSelect = (tag: Tag) => {

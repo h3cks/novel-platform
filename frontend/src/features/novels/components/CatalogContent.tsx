@@ -1,35 +1,71 @@
 'use client';
 
-import { useState } from 'react';
+import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import { useNovels } from '../hooks/useNovels';
 import { NovelList } from './NovelList';
 
-export const CatalogContent = () => {
-  const [page, setPage] = useState(1);
-  const limit = 10; // 10 новел на сторінку
+interface CatalogContentProps {
+  filters?: {
+    status?: string | null;
+    sort?: string | null;
+    page?: string | null;
+  };
+}
 
-  // Припускаємо, що хук useNovels передає параметри далі в API
-  const { data, isLoading, isError } = useNovels({ page, limit });
+export const CatalogContent = ({ filters }: CatalogContentProps) => {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+
+  // Беремо сторінку одразу з фільтрів (URL), дефолт — 1
+  const page = filters?.page ? parseInt(filters.page, 10) : 1;
+  const limit = 10;
+
+  const { data, isLoading, isError } = useNovels({
+    page,
+    limit,
+    status: filters?.status || undefined,
+    sort: filters?.sort || undefined
+  });
+
+  // Оновлюємо URL замість локального стейту
+  const updatePageInUrl = (newPage: number) => {
+    const params = new URLSearchParams(searchParams.toString());
+    params.set('page', newPage.toString());
+    // Оновлюємо URL і скролимо вгору
+    router.push(`${pathname}?${params.toString()}`, { scroll: true });
+  };
+
+  const handleNext = () => updatePageInUrl(page + 1);
+  const handlePrev = () => updatePageInUrl(Math.max(1, page - 1));
 
   if (isLoading) {
-    return <div className="text-center text-slate-500 py-10">Завантаження каталогу...</div>;
+    return (
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 animate-pulse mt-8">
+        {[...Array(8)].map((_, i) => (
+          <div key={i} className="h-72 bg-slate-200 rounded-2xl"></div>
+        ))}
+      </div>
+    );
   }
 
   if (isError) {
     return <div className="text-center text-red-500 py-10">Помилка завантаження новел.</div>;
   }
 
-  const handleNext = () => setPage((prev) => prev + 1);
-  const handlePrev = () => setPage((prev) => Math.max(1, prev - 1));
+  const novelsArray = Array.isArray(data)
+    ? data
+    : data?.items || data?.data?.items || [];
 
-  // Якщо data.total повернуто бекендом, ви можете використовувати його для визначення останньої сторінки
-  const hasMore = Array.isArray(data) ? data.length === limit : false;
+  const totalItems = data?.total || data?.meta?.total;
+  const hasMore = totalItems
+    ? page * limit < totalItems
+    : novelsArray.length === limit;
 
   return (
     <div className="space-y-8">
-      <NovelList novels={data} />
+      <NovelList novels={novelsArray} />
 
-      {/* Пагінація */}
       <div className="flex justify-center items-center gap-4 py-6 border-t border-slate-100 mt-8">
         <button
           onClick={handlePrev}
@@ -39,7 +75,7 @@ export const CatalogContent = () => {
           &larr; Попередня
         </button>
         <span className="text-slate-600 font-bold bg-slate-100 px-4 py-2 rounded-lg">
-          {page}
+          Сторінка {page}
         </span>
         <button
           onClick={handleNext}

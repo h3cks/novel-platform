@@ -57,23 +57,43 @@ export const LibraryTabs = () => {
 
       {/* Content */}
       <div className="min-h-[400px]">
-        {/* Вкладка: Закладки */}
-        {activeTab === 'bookmarks' && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {isLoadingBookmarks ? (
-              <p className="text-slate-500 animate-pulse">Завантаження закладок...</p>
-            ) : !bookmarks || bookmarks.length === 0 ? (
-              <p className="text-slate-500 col-span-2">Ваша бібліотека порожня.</p>
+        {/* Скелетони завантаження */}
+        {((isLoadingBookmarks && activeTab === 'bookmarks') || (isLoadingHistory && activeTab === 'history')) && (
+          <div className="space-y-4 mt-6 animate-pulse">
+            {[...Array(4)].map((_, i) => (
+              <div key={i} className="flex gap-4 p-4 border border-slate-200 rounded-2xl bg-white">
+                <div className="w-20 h-28 bg-slate-200 rounded-xl shrink-0"></div>
+                <div className="flex-1 flex flex-col justify-between py-1">
+                  <div className="space-y-2">
+                    <div className="h-5 bg-slate-200 rounded w-2/3"></div>
+                    <div className="h-4 bg-slate-200 rounded w-1/3"></div>
+                  </div>
+                  <div className="h-8 bg-slate-200 rounded-lg w-28"></div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Відображення Закладок */}
+        {!isLoadingBookmarks && activeTab === 'bookmarks' && (
+          <div className="space-y-4 mt-6">
+            {bookmarks?.length === 0 ? (
+              <div className="text-center py-10 text-slate-500">У вас ще немає збережених новел.</div>
             ) : (
-              bookmarks.map((b: any) => (
-                <BookmarkItem key={b.id} bookmark={b} onRemove={(id) => removeMutation.mutate(id)} />
+              bookmarks?.map((bookmark: any) => (
+                <BookmarkItem
+                  key={bookmark.id}
+                  bookmark={bookmark}
+                  onRemove={(id) => removeMutation.mutate(id)}
+                />
               ))
             )}
           </div>
         )}
 
         {/* Вкладка: Історія */}
-        {activeTab === 'history' && (
+        {!isLoadingHistory && activeTab === 'history' && (
           <div className="flex flex-col gap-3">
             {isLoadingHistory ? (
               <p className="text-slate-500 animate-pulse">Завантаження історії...</p>
