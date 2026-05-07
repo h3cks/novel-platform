@@ -23,10 +23,11 @@ export const novelsService = {
     return data.data?.items || data.items || data.data || data || [];
   },
 
-  // НОВІ МЕТОДИ ДЛЯ ГОЛОВНОЇ СТОРІНКИ:
   getRecommended: async (): Promise<Novel[]> => {
     const { data } = await apiClient.get('/novels?sort=recommended&limit=15');
-    return data.data?.items || data.items || [];
+
+    const items = data.data?.items || data.items || data.data || data || [];
+    return Array.isArray(items) ? items : [];
   },
 
   getTopOfWeek: async (): Promise<Novel[]> => {

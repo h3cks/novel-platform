@@ -1,12 +1,13 @@
 import { apiClient } from '@/lib/axios';
 import { Novel } from '@/features/novels/types';
-import { SearchParams } from '../types';
 
 export const searchService = {
-  // Пошук новелл за заданими параметрами
-  searchNovels: async (params: SearchParams): Promise<Novel[]> => {
-    // Відправляємо параметри у вигляді query-строки: /novels?keyword=...
-    const { data } = await apiClient.get<Novel[]>('/novels', { params });
-    return data;
-  }
+  searchNovels: async (params: { q?: string; page?: number; limit?: number }): Promise<Novel[]> => {
+    if (!params.q?.trim()) return [];
+
+    const { data } = await apiClient.get('/novels', { params });
+
+    const items = data.data?.items || data.items || data.data || data || [];
+    return Array.isArray(items) ? items : [];
+  },
 };

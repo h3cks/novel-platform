@@ -4,13 +4,15 @@ import { useQuery } from '@tanstack/react-query';
 import { ChapterForm } from '@/features/studio/components/ChapterForm';
 import { studioChaptersService } from '@/features/studio/api/studio-chapters.service';
 import Link from 'next/link';
+import { useParams } from 'next/navigation';
 
-export default function EditChapterPage({ params }: { params: { id: string; chapterId: string } }) {
+export default function EditChapterPage() {
+  const params = useParams();
+  const novelId = params.id as string;
+  const chapterId = params.chapterId as string;
   const { data: chapter, isLoading, error } = useQuery({
-    // Додано params.id до ключа кешування для уникнення конфліктів
     queryKey: ['chapter', params.id, params.chapterId],
-    // Виправлено: передаємо обидва аргументи (novelId, chapterId)
-    queryFn: () => studioChaptersService.getChapterById(params.id, params.chapterId),
+    queryFn: () => studioChaptersService.getChapterById(novelId , chapterId),
   });
 
   if (isLoading) return <div className="text-center mt-20 text-gray-500">Завантаження розділу...</div>;
@@ -23,7 +25,7 @@ export default function EditChapterPage({ params }: { params: { id: string; chap
           &larr; Назад до управління новелою
         </Link>
       </div>
-      <ChapterForm novelId={params.id} chapterId={params.chapterId} initialData={chapter} />
+      <ChapterForm novelId={novelId} chapterId={chapterId} initialData={chapter} />
     </div>
   );
 }

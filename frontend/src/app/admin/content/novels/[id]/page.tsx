@@ -16,7 +16,11 @@ export default function AdminNovelDetailPage() {
   });
 
   const blockMutation = useMutation({
-    mutationFn: () => adminService.blockNovel(Number(id), novel.flagged ? 'unblock' : 'violation'),
+    mutationFn: () => adminService.blockNovel(
+      Number(id),
+      !novel.flagged,
+      novel.flagged ? 'unblock' : 'violation' // 3-й аргумент: причина
+    ),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-novel-detail'] });
       toast.success('Статус змінено');
