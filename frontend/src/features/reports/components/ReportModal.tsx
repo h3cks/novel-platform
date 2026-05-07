@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useCreateReport } from '../hooks/useCreateReport';
 import { ReportTargetType } from '@/features/reports/types';
+import { toast } from 'react-hot-toast'; // ДОДАНО: імпорт toast
 
 interface ReportModalProps {
   isOpen: boolean;
@@ -23,7 +24,6 @@ export const ReportModal = ({ isOpen, onClose, targetId, targetType }: ReportMod
   const [reason, setReason] = useState(REPORT_REASONS[0]);
   const [detail, setDetail] = useState('');
 
-  // Використовуємо ваш хук
   const { mutate: submitReport, isPending } = useCreateReport();
 
   if (!isOpen) return null;
@@ -33,25 +33,26 @@ export const ReportModal = ({ isOpen, onClose, targetId, targetType }: ReportMod
     submitReport(
       {
         targetType,
-        targetId: Number(targetId), // Ваш сервіс очікує number
+        targetId: Number(targetId),
         reason,
         detail
       },
       {
         onSuccess: () => {
-          alert('Скаргу успішно відправлено!'); // Замініть на toast.success, якщо використовуєте react-hot-toast
+          toast.success('Скаргу успішно відправлено!'); // ЗМІНЕНО: використовуємо toast
           setDetail('');
           onClose();
         },
-        onError: () => {
-          alert('Помилка відправки скарги.'); // Замініть на toast.error
+        onError: (error: any) => {
+          toast.error(error.response?.data?.message || 'Помилка відправки скарги.'); // ЗМІНЕНО
         }
       }
     );
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
+    // ЗМІНЕНО: z-50 -> z-[100]
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
       <div className="bg-white rounded-xl w-full max-w-md shadow-xl overflow-hidden flex flex-col">
         <div className="p-4 border-b border-gray-100 flex justify-between items-center bg-gray-50">
           <h3 className="font-bold text-gray-900">Поскаржитися</h3>

@@ -80,9 +80,9 @@ export const ReportList = () => {
               <td className="px-6 py-4 whitespace-nowrap text-right">
                 <button
                   onClick={() => setSelectedReport(report)}
-                  className="text-blue-600 hover:text-blue-900 font-medium"
+                  className="text-blue-600 hover:text-blue-900 font-medium px-3 py-1.5 hover:bg-blue-50 rounded-lg transition-colors"
                 >
-                  Обладнати
+                  Розглянути
                 </button>
               </td>
             </tr>

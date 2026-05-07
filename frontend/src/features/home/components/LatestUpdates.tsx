@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useLatestUpdates } from '@/features/novels/hooks/useNovels';
 import { formatDistanceToNow } from 'date-fns';
-import { uk } from 'date-fns/locale'; // Якщо хочете українською
+import { uk } from 'date-fns/locale';
 
 export const LatestUpdates = () => {
   const { data: updates, isLoading } = useLatestUpdates();
@@ -24,7 +24,7 @@ export const LatestUpdates = () => {
         {isLoading ? (
           <div className="p-6 space-y-4 animate-pulse">
             {[1, 2, 3, 4, 5].map((i) => (
-              <div key={i} className="h-8 bg-slate-100 rounded w-full"></div>
+              <div key={i} className="h-12 bg-slate-100 rounded-lg w-full"></div>
             ))}
           </div>
         ) : updates && updates.length > 0 ? (
@@ -45,14 +45,19 @@ export const LatestUpdates = () => {
                     {update.chapterTitle || `Розділ ${update.chapterNumber}`}
                   </Link>
                   <span className="text-xs font-medium text-slate-400 shrink-0">
-                    {formatDistanceToNow(new Date(update.updatedAt), { addSuffix: true, locale: uk })}
+                    {/* БЕЗПЕЧНА ПЕРЕВІРКА ДАТИ */}
+                    {update.updatedAt && !isNaN(new Date(update.updatedAt).getTime())
+                      ? formatDistanceToNow(new Date(update.updatedAt), { addSuffix: true, locale: uk })
+                      : 'Нещодавно'}
                   </span>
                 </div>
               </li>
             ))}
           </ul>
         ) : (
-          <div className="p-8 text-center text-slate-500">Ще немає жодних оновлень.</div>
+          <div className="p-6 text-center text-slate-500 font-medium">
+            Оновлень поки немає.
+          </div>
         )}
       </div>
     </section>

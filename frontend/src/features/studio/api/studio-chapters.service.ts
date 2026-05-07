@@ -29,4 +29,8 @@ export const studioChaptersService = {
     const { data } = await apiClient.patch(`/novels/${novelId}/chapters/${chapterId}`, payload);
     return data.data?.chapter || data.chapter;
   },
+
+  deleteChapter: async (novelId: string, chapterId: string): Promise<void> => {
+    await apiClient.delete(`/novels/${novelId}/chapters/${chapterId}`);
+  },
 };

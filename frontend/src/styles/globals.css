@@ -11,7 +11,6 @@
         @apply text-slate-900 font-bold tracking-tight;
     }
 
-    /* Покращення скролбару для читалки та дашбордів */
     ::-webkit-scrollbar {
         width: 8px;
         height: 8px;
@@ -28,8 +27,6 @@
 }
 
 @layer components {
-    /* Перевикористовувані компоненти, щоб не дублювати довгі рядки класів */
-
     .btn-primary {
         @apply bg-primary-600 text-white px-6 py-2.5 rounded-xl font-semibold shadow-sm hover:bg-primary-700 hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 disabled:opacity-50 disabled:pointer-events-none;
     }
@@ -44,5 +41,15 @@
 
     .card {
         @apply bg-white rounded-2xl shadow-card border border-slate-100 overflow-hidden;
+    }
+}
+
+@layer utilities {
+    .hide-scrollbar::-webkit-scrollbar {
+        display: none;
+    }
+    .hide-scrollbar {
+        -ms-overflow-style: none;
+        scrollbar-width: none;
     }
 }
