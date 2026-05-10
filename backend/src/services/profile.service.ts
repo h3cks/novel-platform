@@ -1,6 +1,5 @@
 // backend/src/services/profile.service.ts
 import prisma from '../prisma/client';
-
 export async function getProfileById(id: number) {
   const user = await prisma.user.findUnique({
     where: { id },
@@ -13,8 +12,19 @@ export async function getProfileById(id: number) {
       role: true,
       emailConfirmed: true,
       createdAt: true,
+
+      novels: {
+        where: { status: 'PUBLISHED' },
+        include: {
+          author: {
+            // ВАЖЛИВО: Додали id: true сюди!
+            select: { id: true, username: true, displayName: true }
+          }
+        }
+      }
     },
   });
+
   return user ?? null;
 }
 

@@ -1,4 +1,3 @@
-// src/features/novels/components/NovelCard.tsx
 import Link from 'next/link';
 import { Novel } from '../types';
 import Image from 'next/image';
@@ -22,7 +21,6 @@ export const NovelCard = ({ novel, layout = 'grid' }: NovelCardProps) => {
             {novel.status === 'PUBLISHED' ? 'Опубліковано' : 'В процесі'}
           </span>
         </div>
-        {/* ЗМІНЕНО: Використано оптимізований компонент Image */}
         <Image
           src={coverImage}
           alt={novel.title}

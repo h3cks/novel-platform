@@ -1,12 +1,14 @@
-// src/features/novels/components/RecommendedNovels.tsx
 'use client';
 
 import { useRecommendedNovels } from '../hooks/useNovels';
 import { NovelCard } from './NovelCard';
 import { Novel } from '../types';
 
-export const RecommendedNovels = () => {
+interface RecommendedNovelsProps {
+  currentNovelId?: string;
+}
 
+export const RecommendedNovels = ({ currentNovelId }: RecommendedNovelsProps) => {
   const { data: novels, isLoading, isError } = useRecommendedNovels();
 
   if (isLoading) {
@@ -22,21 +24,25 @@ export const RecommendedNovels = () => {
     );
   }
 
-  // Приводимо до any, щоб уникнути помилки TS2339 (never)
   const responseData = novels as any;
 
-  // Безпечно дістаємо масив новел, незалежно від того, що повернув бекенд
   const novelsArray = Array.isArray(responseData)
     ? responseData
     : responseData?.items || responseData?.data?.items || [];
 
-  // Якщо сталася помилка або список порожній — просто нічого не рендеримо
   if (isError || !novelsArray || novelsArray.length === 0) {
     return null;
   }
 
-  // Залишаємо тільки перші 4 новели для гарного відображення
-  const displayNovels = novelsArray.slice(0, 4);
+  // ФІЛЬТРУЄМО ПОТОЧНУ НОВЕЛУ
+  const filteredNovels = currentNovelId
+    ? novelsArray.filter((novel: Novel) => String(novel.id) !== String(currentNovelId))
+    : novelsArray;
+
+
+  const displayNovels = filteredNovels.slice(0, 4);
+
+  if (displayNovels.length === 0) return null;
 
   return (
     <div className="py-8 border-t border-slate-100 mt-10">

@@ -9,7 +9,7 @@ export default async function NovelPage({ params }: { params: Promise<{ id: stri
   return (
     <div className="max-w-5xl mx-auto py-6 px-4 sm:px-6">
       <NovelDetails novelId={id} />
-      <RecommendedNovels />
+      <RecommendedNovels currentNovelId={id} />
       <CommentSection novelId={id} />
     </div>
   );

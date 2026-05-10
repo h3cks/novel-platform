@@ -17,7 +17,6 @@ export const CatalogContent = ({ filters }: CatalogContentProps) => {
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
-  // Беремо сторінку одразу з фільтрів (URL), дефолт — 1
   const page = filters?.page ? parseInt(filters.page, 10) : 1;
   const limit = 10;
 
@@ -28,11 +27,10 @@ export const CatalogContent = ({ filters }: CatalogContentProps) => {
     sort: filters?.sort || undefined
   });
 
-  // Оновлюємо URL замість локального стейту
   const updatePageInUrl = (newPage: number) => {
     const params = new URLSearchParams(searchParams.toString());
     params.set('page', newPage.toString());
-    // Оновлюємо URL і скролимо вгору
+
     router.push(`${pathname}?${params.toString()}`, { scroll: true });
   };
 

@@ -63,16 +63,6 @@ export const NovelDetails = ({ novelId }: NovelDetailsProps) => {
     }
   });
 
-  const deleteNovelMutation = useMutation({
-    mutationFn: () => novelsService.deleteNovel(novel!.id),
-    onSuccess: () => {
-      toast.success('Новелу успішно видалено.');
-      router.push('/novels');
-    },
-    onError: () => {
-      toast.error('Помилка при видаленні новели');
-    }
-  });
 
   if (isNovelLoading) {
     return <div className="bg-slate-50 border border-slate-100 rounded-3xl p-10 h-96 animate-pulse mb-8"></div>;
@@ -86,11 +76,11 @@ export const NovelDetails = ({ novelId }: NovelDetailsProps) => {
     );
   }
 
-  const canDelete = user && (user.role === 'ADMIN' || user.id === novel.authorId);
 
   const averageRating = novel.ratings && novel.ratings.length > 0
     ? (novel.ratings.reduce((acc, curr) => acc + curr.score, 0) / novel.ratings.length).toFixed(1)
     : '0.0';
+
   const ratingCount = novel.ratings?.length || 0;
 
   const bookmarksCount = novel._count?.followers || 0;
@@ -102,7 +92,7 @@ export const NovelDetails = ({ novelId }: NovelDetailsProps) => {
   const buttonText = validLastRead ? 'Продовжити читати' : 'Почати читати';
 
   return (
-    <div className="bg-white rounded-3xl p-6 md:p-10 shadow-sm border border-slate-100 mb-8">
+    <div className="relative bg-white rounded-3xl p-6 md:p-10 shadow-sm border border-slate-100 mb-8">
       {user && (
         <button
           onClick={() => setIsReportOpen(true)}
@@ -126,15 +116,6 @@ export const NovelDetails = ({ novelId }: NovelDetailsProps) => {
         </div>
 
         <div className="flex-grow flex flex-col relative">
-          {canDelete && (
-            <button
-              onClick={() => { if(confirm('Ви впевнені, що хочете видалити цю новелу?')) deleteNovelMutation.mutate(); }}
-              disabled={deleteNovelMutation.isPending}
-              className="absolute top-0 right-0 px-4 py-2 bg-red-50 text-red-600 rounded-lg text-sm font-bold hover:bg-red-100 transition"
-            >
-              Видалити новелу
-            </button>
-          )}
 
           <h1 className="text-3xl md:text-4xl font-black text-slate-900 mb-2 pr-32">{novel.title}</h1>
 

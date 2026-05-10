@@ -5,33 +5,43 @@ import { useEffect, useState } from 'react';
 
 export const ReaderSettings = () => {
   const { fontSize, theme, setFontSize, setTheme } = useReaderStore();
-
-  // Запобігання помилці Hydration (клієнт/сервер невідповідність через localStorage)
   const [mounted, setMounted] = useState(false);
+
   useEffect(() => setMounted(true), []);
 
-  if (!mounted) return null; // Не рендеримо на сервері
+  if (!mounted) return null;
+
+  // Динамічні стилі для панелі залежно від вибраної теми
+  const panelStyles =
+    theme === 'dark' ? 'bg-white/5 border-white/10 text-gray-300' :
+      theme === 'sepia' ? 'bg-[#eaddc5] border-[#d4c5b0] text-[#5b4636]' :
+        'bg-white border-gray-200 text-gray-700';
+
+  const buttonStyles =
+    theme === 'dark' ? 'hover:bg-white/10 border-white/20 text-gray-300' :
+      theme === 'sepia' ? 'hover:bg-[#dbcbae] border-[#d4c5b0] text-[#5b4636]' :
+        'hover:bg-gray-100 border-gray-200 text-gray-700';
 
   return (
-    <div className="flex flex-wrap items-center justify-between gap-4 p-4 mb-8 bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-100 dark:border-gray-700">
+    <div className={`flex flex-wrap items-center justify-between gap-4 p-4 mb-10 rounded-xl shadow-sm border transition-colors duration-300 ${panelStyles}`}>
 
       {/* Налаштування шрифту */}
       <div className="flex items-center gap-3">
-        <span className="text-sm font-medium text-gray-600 dark:text-gray-300">Шрифт:</span>
-        <div className="flex items-center border border-gray-200 dark:border-gray-600 rounded-md overflow-hidden">
+        <span className="text-sm font-semibold opacity-80">Розмір тексту:</span>
+        <div className="flex items-center rounded-lg overflow-hidden border border-inherit">
           <button
             onClick={() => setFontSize(Math.max(12, fontSize - 2))}
-            className="px-3 py-1 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200 transition"
+            className={`px-4 py-1.5 font-bold transition-colors ${buttonStyles}`}
             aria-label="Зменшити шрифт"
           >
             A-
           </button>
-          <span className="px-3 py-1 text-sm font-medium text-gray-800 dark:text-gray-100 border-x border-gray-200 dark:border-gray-600">
+          <span className={`px-4 py-1.5 text-sm font-bold border-x border-inherit`}>
             {fontSize}px
           </span>
           <button
             onClick={() => setFontSize(Math.min(32, fontSize + 2))}
-            className="px-3 py-1 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200 transition"
+            className={`px-4 py-1.5 font-bold transition-colors ${buttonStyles}`}
             aria-label="Збільшити шрифт"
           >
             A+
@@ -40,23 +50,27 @@ export const ReaderSettings = () => {
       </div>
 
       {/* Налаштування теми */}
-      <div className="flex items-center gap-2">
-        <button
-          onClick={() => setTheme('light')}
-          className={`w-8 h-8 rounded-full border-2 ${theme === 'light' ? 'border-blue-500' : 'border-gray-200'} bg-white`}
-          title="Світла тема"
-        />
-        <button
-          onClick={() => setTheme('sepia')}
-          className={`w-8 h-8 rounded-full border-2 ${theme === 'sepia' ? 'border-blue-500' : 'border-gray-200'} bg-[#f4ecd8]`}
-          title="Тема Сепія"
-        />
-        <button
-          onClick={() => setTheme('dark')}
-          className={`w-8 h-8 rounded-full border-2 ${theme === 'dark' ? 'border-blue-500' : 'border-gray-700'} bg-gray-900`}
-          title="Темна тема"
-        />
+      <div className="flex items-center gap-3">
+        <span className="text-sm font-semibold opacity-80">Фон:</span>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setTheme('light')}
+            className={`w-9 h-9 rounded-full border-2 transition-all ${theme === 'light' ? 'border-indigo-500 scale-110' : 'border-gray-200 hover:scale-105'} bg-white`}
+            title="Світла тема"
+          />
+          <button
+            onClick={() => setTheme('sepia')}
+            className={`w-9 h-9 rounded-full border-2 transition-all ${theme === 'sepia' ? 'border-indigo-500 scale-110' : 'border-gray-300 hover:scale-105'} bg-[#f4ecd8]`}
+            title="Тема Сепія"
+          />
+          <button
+            onClick={() => setTheme('dark')}
+            className={`w-9 h-9 rounded-full border-2 transition-all ${theme === 'dark' ? 'border-indigo-500 scale-110' : 'border-gray-700 hover:scale-105'} bg-[#1a1a1a]`}
+            title="Темна тема"
+          />
+        </div>
       </div>
+
     </div>
   );
 };

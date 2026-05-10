@@ -27,6 +27,10 @@ export const ReaderView = ({ novelId, chapterId }: ReaderViewProps) => {
   const { fontSize, theme } = useReaderStore();
   const [mounted, setMounted] = useState(false);
 
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   const { data: allChapters } = useQuery({
     queryKey: ['chapters', novelId],
     queryFn: () => chaptersService.getNovelChapters(novelId),
@@ -66,9 +70,9 @@ export const ReaderView = ({ novelId, chapterId }: ReaderViewProps) => {
   }
 
   const themeClasses = {
-    light: 'bg-white text-gray-900',
-    sepia: 'bg-[#fcf8ef] text-[#5b4636]',
-    dark: 'bg-[#121212] text-gray-300',
+    light: 'bg-white text-slate-900',
+    sepia: 'bg-[#f4ecd8] text-[#5b4636]',
+    dark: 'dark bg-[#121212] text-gray-300',
   };
 
   const activeThemeClass = mounted ? themeClasses[theme] : themeClasses.light;
@@ -78,8 +82,8 @@ export const ReaderView = ({ novelId, chapterId }: ReaderViewProps) => {
   const canDelete = user && (user.role === 'ADMIN' || user.role === 'AUTHOR');
 
   return (
-    <div className={`min-h-screen pb-20 transition-colors duration-300 ${activeThemeClass}`}>
-      <div className="max-w-3xl mx-auto px-4 sm:px-6 py-8">
+    <div className={`fixed inset-0 z-[90] w-full h-full overflow-y-auto transition-colors duration-300 ${activeThemeClass}`}>
+      <div className="max-w-3xl mx-auto px-4 sm:px-6 py-8 pb-24 min-h-screen">
 
         <div className="mb-8 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <Link href={`/novels/${novelId}`} className="text-sm font-medium opacity-70 hover:opacity-100 flex items-center gap-1 transition-opacity">
@@ -89,7 +93,7 @@ export const ReaderView = ({ novelId, chapterId }: ReaderViewProps) => {
           <div className="flex items-center gap-3 w-full sm:w-auto">
             {allChapters && allChapters.length > 0 && (
               <select
-                className="bg-transparent border border-gray-300 dark:border-gray-700 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 w-full sm:w-64"
+                className="bg-transparent border border-gray-300 dark:border-gray-700 dark:bg-[#1a1a1a] dark:text-gray-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 w-full sm:w-64"
                 value={chapterId}
                 onChange={(e) => router.push(`/novels/${novelId}/chapters/${e.target.value}`)}
               >
@@ -129,12 +133,14 @@ export const ReaderView = ({ novelId, chapterId }: ReaderViewProps) => {
         <ReaderSettings />
 
         <article>
-          <h1 className="text-3xl sm:text-4xl font-extrabold mb-12 text-center leading-tight">
+          <h1 className={`text-3xl sm:text-4xl font-extrabold mb-12 text-center leading-tight ${mounted && theme === 'dark' ? 'text-gray-100' : 'text-slate-900'}`}>
             Розділ {chapter.order}: {chapter.title}
           </h1>
 
           <div
-            className="prose prose-lg max-w-none prose-headings:font-bold reader-content leading-relaxed"
+            className={`prose prose-lg max-w-none prose-headings:font-bold reader-content leading-relaxed ${
+              mounted && theme === 'dark' ? 'prose-invert' : ''
+            }`}
             style={{ fontSize: mounted ? `${fontSize}px` : '18px' }}
             dangerouslySetInnerHTML={{ __html: chapter.content }}
           />

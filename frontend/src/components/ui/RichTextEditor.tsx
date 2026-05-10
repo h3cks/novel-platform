@@ -22,21 +22,21 @@ export const RichTextEditor = ({ content, onChange, disabled = false }: RichText
     },
     editorProps: {
       attributes: {
-        // ЗМІНЕНО ТУТ: Прибрали `prose-lg`, додали `prose-p:my-2` (менші відступи) та інші налаштування для компактності
         class: 'prose max-w-none focus:outline-none min-h-[400px] p-6 bg-white prose-p:my-2 prose-headings:mt-4 prose-headings:mb-2 prose-blockquote:my-2 prose-blockquote:py-1',
       },
     },
   });
-
-  if (!editor) {
-    return <div className="min-h-[400px] bg-gray-50 border border-gray-200 rounded-md animate-pulse"></div>;
-  }
 
   useEffect(() => {
     if (editor && editor.isEditable === disabled) {
       editor.setEditable(!disabled);
     }
   }, [editor, disabled]);
+
+  // РАННІЙ ВИХІД
+  if (!editor) {
+    return <div className="min-h-[400px] bg-gray-50 border border-gray-200 rounded-md animate-pulse"></div>;
+  }
 
   const ToolbarButton = ({
                            onClick,
@@ -62,10 +62,9 @@ export const RichTextEditor = ({ content, onChange, disabled = false }: RichText
   );
 
   return (
-    // ЗМІНЕНО ТУТ: Додано focus-within для красивої синьої рамки, коли редактор активний
     <div className={`border border-gray-300 rounded-lg overflow-hidden flex flex-col focus-within:ring-2 focus-within:ring-blue-500 transition-shadow ${disabled ? 'opacity-70' : ''}`}>
 
-      {/* Панель інструментів (завжди залишається зверху) */}
+      {/* Панель інструментів */}
       <div className="flex flex-wrap items-center gap-1 p-2 bg-gray-50 border-b border-gray-300">
         <ToolbarButton onClick={() => editor.chain().focus().toggleBold().run()} isActive={editor.isActive('bold')}>
           Жирний
