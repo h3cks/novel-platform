@@ -200,12 +200,6 @@ export async function getReportById(id: number) {
   return report;
 }
 
-/**
- * processReport:
- * - data.status приймає local ReportStatusLiteral (validated)
- * - при виклику prisma.report.update ми приводимо status через 'as any', щоб уникнути проблем з генерованими типами клієнта
- *   (це локалізоване, безпечне приведення: перед тим ми вже валідували значення).
- */
 export async function processReport(
   reportId: number,
   moderatorId: number,
@@ -223,13 +217,11 @@ export async function processReport(
     throw Object.assign(new Error('Invalid status'), { code: 'INVALID_STATUS' });
   }
 
-  // Переконаємось, що status або undefined або валідний literal
   const statusToSet = data.status !== undefined ? data.status : existing.status;
 
   const updated = await prisma.report.update({
     where: { id: reportId },
     data: {
-      // Практичний привід: statusToSet приводимо до any лише тут — бо типи Prisma можуть бути іншої форми
       status: statusToSet as any,
       moderatorComment:
         typeof data.moderatorComment === 'string'
@@ -240,6 +232,23 @@ export async function processReport(
       actionTakenNote:
         typeof data.actionTakenNote === 'string' ? data.actionTakenNote : existing.actionTakenNote,
     },
+  });
+
+
+  await prisma.auditLog.create({
+    data: {
+      actorId: moderatorId,
+      action: 'PROCESS_REPORT',
+      targetType: 'REPORT',
+      targetId: reportId,
+      reason: typeof data.moderatorComment === 'string' && data.moderatorComment.length > 0
+        ? data.moderatorComment
+        : 'Зміна статусу скарги',
+      details: JSON.stringify({
+        oldStatus: existing.status,
+        newStatus: statusToSet
+      }),
+    }
   });
 
   return updated;

@@ -9,14 +9,12 @@ interface NovelListProps {
 }
 
 export const NovelList = ({ novels }: NovelListProps) => {
-  // Безпечно дістаємо масив:
-  // Якщо це вже масив - беремо його.
-  // Якщо це об'єкт від бекенду - шукаємо всередині поле items або data.items
+
   const novelsArray = Array.isArray(novels)
     ? novels
     : novels?.items || novels?.data?.items || [];
 
-  // Перевіряємо, чи є що рендерити
+
   if (!novelsArray || novelsArray.length === 0) {
     return <div className="text-center text-slate-500 py-10">Новел не знайдено.</div>;
   }

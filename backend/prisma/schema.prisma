@@ -7,6 +7,10 @@ generator client {
   output   = "../src/generated/prisma"
 }
 
+// ==========================================
+// ENUMS (Перелічувані типи)
+// ==========================================
+
 enum UserRole {
   READER
   AUTHOR
@@ -29,6 +33,10 @@ enum ReportStatus {
   ESCALATED
 }
 
+// ==========================================
+// CORE: Користувачі та Автентифікація
+// ==========================================
+
 model User {
   id                   Int       @id @default(autoincrement())
   email                String?   @unique
@@ -46,23 +54,25 @@ model User {
   lastActive           DateTime  @default(now())
   createdAt            DateTime  @default(now())
 
-  novels   Novel[]
-  comments Comment[]
-  ratings  Rating[]
-  follows  Follow[]
-  views    ViewHistory[]
-  reports  Report[]
+  // Зв'язки
+  novels           Novel[]
+  comments         Comment[]
+  ratings          Rating[]
+  follows          Follow[]
+  views            ViewHistory[]
+  reports          Report[]
+  notifications    Notification[]
 
-  processedReports Report[] @relation("ProcessedBy")
-
-  auditLogs AuditLog[] @relation("AuditActor")
-
-  notifications Notification[]
-
-  following UserFollow[] @relation("Follower")
-
-  followers UserFollow[] @relation("Author")
+  // Специфічні зв'язки (Аудит, Модерація, Підписки)
+  processedReports Report[]     @relation("ProcessedBy")
+  auditLogs        AuditLog[]   @relation("AuditActor")
+  following        UserFollow[] @relation("Follower")
+  followers        UserFollow[] @relation("Author")
 }
+
+// ==========================================
+// CONTENT: Новели та Розділи
+// ==========================================
 
 model Novel {
   id            Int         @id @default(autoincrement())
@@ -79,6 +89,7 @@ model Novel {
   createdAt     DateTime    @default(now())
   updatedAt     DateTime    @updatedAt
 
+  // Зв'язки
   chapters  Chapter[]
   comments  Comment[]
   ratings   Rating[]
@@ -93,21 +104,75 @@ model Novel {
 }
 
 model Chapter {
-  id            Int           @id @default(autoincrement())
+  id            Int      @id @default(autoincrement())
   novelId       Int
-  novel         Novel         @relation(fields: [novelId], references: [id])
+  novel         Novel    @relation(fields: [novelId], references: [id])
   title         String
-  content       String        @db.Text
+  content       String   @db.Text
   wordCount     Int?
   order         Int
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
   languageRatio Float?
+
+  // Зв'язки
   comments      Comment[]
   views         ViewHistory[]
 
   @@unique([novelId, order])
 }
+
+// ==========================================
+// TAXONOMY: Жанри та Теги (зв'язки Багато-до-Багатьох)
+// ==========================================
+
+model Genre {
+  id          Int      @id @default(autoincrement())
+  name        String   @unique
+  slug        String?  @unique
+  description String?
+  createdAt   DateTime @default(now())
+
+  novels NovelGenre[]
+
+  @@index([name])
+  @@index([slug])
+}
+
+model NovelGenre {
+  novelId Int
+  genreId Int
+  novel   Novel @relation(fields: [novelId], references: [id])
+  genre   Genre @relation(fields: [genreId], references: [id])
+
+  @@id([novelId, genreId])
+}
+
+model Tag {
+  id          Int      @id @default(autoincrement())
+  name        String   @unique
+  slug        String?  @unique
+  description String?
+  createdAt   DateTime @default(now())
+
+  novels NovelTag[]
+
+  @@index([name])
+  @@index([slug])
+}
+
+model NovelTag {
+  novelId Int
+  tagId   Int
+  novel   Novel @relation(fields: [novelId], references: [id])
+  tag     Tag   @relation(fields: [tagId], references: [id])
+
+  @@id([novelId, tagId])
+}
+
+// ==========================================
+// SOCIAL: Взаємодія, Коментарі, Оцінки
+// ==========================================
 
 model Comment {
   id        Int       @id @default(autoincrement())
@@ -141,55 +206,11 @@ model Rating {
   @@unique([novelId, userId])
 }
 
-model Tag {
-  id          Int      @id @default(autoincrement())
-  name        String   @unique
-  slug        String?  @unique
-  description String?
-  createdAt   DateTime @default(now())
-
-  novels NovelTag[]
-
-  @@index([name])
-  @@index([slug])
-}
-
-model NovelTag {
-  novelId Int
-  tagId   Int
-  novel   Novel @relation(fields: [novelId], references: [id])
-  tag     Tag   @relation(fields: [tagId], references: [id])
-
-  @@id([novelId, tagId])
-}
-
-model Genre {
-  id          Int      @id @default(autoincrement())
-  name        String   @unique
-  slug        String?  @unique
-  description String?
-  createdAt   DateTime @default(now())
-
-  novels NovelGenre[]
-
-  @@index([name])
-  @@index([slug])
-}
-
-model NovelGenre {
-  novelId Int
-  genreId Int
-  novel   Novel @relation(fields: [novelId], references: [id])
-  genre   Genre @relation(fields: [genreId], references: [id])
-
-  @@id([novelId, genreId])
-}
-
 model Follow {
   userId    Int
   novelId   Int
-  user      User     @relation(fields: [userId], references: [id])
-  novel     Novel    @relation(fields: [novelId], references: [id])
+  user      User  @relation(fields: [userId], references: [id])
+  novel     Novel @relation(fields: [novelId], references: [id])
   createdAt DateTime @default(now())
 
   @@id([userId, novelId])
@@ -198,8 +219,8 @@ model Follow {
 model UserFollow {
   followerId Int
   authorId   Int
-  follower   User     @relation("Follower", fields: [followerId], references: [id])
-  author     User     @relation("Author", fields: [authorId], references: [id])
+  follower   User  @relation("Follower", fields: [followerId], references: [id])
+  author     User  @relation("Author", fields: [authorId], references: [id])
   createdAt  DateTime @default(now())
 
   @@id([followerId, authorId])
@@ -220,23 +241,29 @@ model ViewHistory {
   @@index([userId])
 }
 
+// ==========================================
+// SYSTEM: Модерація, Аудит та Сповіщення
+// ==========================================
+
 model Report {
   id         Int      @id @default(autoincrement())
   reporterId Int
   reporter   User     @relation(fields: [reporterId], references: [id])
+
+  // Поліморфний зв'язок (Тип об'єкта та його ID)
   targetType String
   targetId   Int
   reason     String
   detail     String?
   createdAt  DateTime @default(now())
 
+  // Обробка модератором
   status           ReportStatus @default(OPEN)
   moderatorId      Int?
   moderator        User?        @relation("ProcessedBy", fields: [moderatorId], references: [id])
   moderatorComment String?
-
-  actionTaken     String?
-  actionTakenNote String?
+  actionTaken      String?
+  actionTakenNote  String?
 
   @@index([targetType, targetId])
   @@index([status])
@@ -244,17 +271,15 @@ model Report {
 }
 
 model AuditLog {
-  id      Int  @id @default(autoincrement())
-  actorId Int
-  actor   User @relation("AuditActor", fields: [actorId], references: [id])
-
+  id         Int      @id @default(autoincrement())
+  actorId    Int
+  actor      User     @relation("AuditActor", fields: [actorId], references: [id])
   action     String
   targetType String
   targetId   Int
   reason     String?
   details    String?
-
-  createdAt DateTime @default(now())
+  createdAt  DateTime @default(now())
 
   @@index([actorId])
   @@index([targetType, targetId])
@@ -264,6 +289,7 @@ model AuditLog {
 model Notification {
   id         Int      @id @default(autoincrement())
   userId     Int?
+  user       User?    @relation(fields: [userId], references: [id])
   type       String
   targetType String?
   targetId   Int?
@@ -272,8 +298,6 @@ model Notification {
   message    String
   read       Boolean  @default(false)
   createdAt  DateTime @default(now())
-
-  user User? @relation(fields: [userId], references: [id])
 
   @@index([userId])
 }

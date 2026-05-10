@@ -7,10 +7,14 @@ import { novelSchema, NovelFormValues } from '../schemas/novel.schema';
 import { useCreateNovel } from '../hooks/useCreateNovel';
 import { useUpdateNovel } from '../hooks/useUpdateNovel';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { useMutation } from '@tanstack/react-query';
 import { ImageUpload } from '@/components/ui/ImageUpload';
 import { GenreSelector } from '@/components/ui/GenreSelector';
 import { TagAutocomplete } from '@/components/ui/TagAutocomplete';
 import { apiClient } from '@/lib/axios';
+import { novelsService } from '@/features/novels/api/novels.service';
+import toast from 'react-hot-toast';
 
 interface NovelFormProps {
   initialData?: any;
@@ -18,25 +22,32 @@ interface NovelFormProps {
 }
 
 export const NovelForm = ({ initialData, novelId }: NovelFormProps) => {
+  const router = useRouter();
   const { mutate: createNovel, isPending: isCreating, error: createError } = useCreateNovel();
   const { mutate: updateNovel, isPending: isUpdating, error: updateError } = useUpdateNovel();
 
-  const isPending = isCreating || isUpdating;
+  // ДОДАНО: Мутація для видалення новели
+  const deleteNovelMutation = useMutation({
+    mutationFn: () => novelsService.deleteNovel(Number(novelId)),
+    onSuccess: () => {
+      toast.success('Новелу успішно видалено.');
+      router.push('/studio'); // Повертаємо в студію
+    },
+    onError: () => {
+      toast.error('Помилка при видаленні новели');
+    }
+  });
+
+  const isPending = isCreating || isUpdating || deleteNovelMutation.isPending;
   const isEditing = !!initialData && !!novelId;
-  const error = createError || updateError; // Повернули змінну error
+  const error = createError || updateError;
 
   const [availableGenres, setAvailableGenres] = useState<{id: number, name: string}[]>([]);
   const [selectedTagObjects, setSelectedTagObjects] = useState<{id: number, name: string}[]>([]);
 
   const { register, handleSubmit, control, setValue, reset, formState: { errors } } = useForm<NovelFormValues>({
     resolver: zodResolver(novelSchema),
-    defaultValues: {
-      title: '',
-      description: '',
-      coverUrl: '',
-      genreIds: [],
-      tagIds: [],
-    }
+    defaultValues: { title: '', description: '', coverUrl: '', genreIds: [], tagIds: [] }
   });
 
   useEffect(() => {
@@ -68,7 +79,6 @@ export const NovelForm = ({ initialData, novelId }: NovelFormProps) => {
       ...data,
       coverUrl: data.coverUrl === '' ? undefined : data.coverUrl,
       description: data.description === '' ? undefined : data.description,
-
       genreIds: data.genreIds?.map(Number),
       tagIds: data.tagIds?.map(Number),
     };
@@ -81,16 +91,9 @@ export const NovelForm = ({ initialData, novelId }: NovelFormProps) => {
   };
 
   const apiError = error as any;
-  const errorMessage =
-    apiError?.response?.data?.message ||
-    apiError?.response?.data?.error?.message ||
-    apiError?.message ||
-    'Сталася помилка при збереженні.';
-
-  if (apiError) console.error("Деталі помилки API:", apiError?.response?.data);
+  const errorMessage = apiError?.response?.data?.message || apiError?.response?.data?.error?.message || apiError?.message || 'Сталася помилка при збереженні.';
 
   return (
-    // Додали обробник onSubmit сюди
     <form onSubmit={handleSubmit(onSubmit)} className="max-w-4xl mx-auto bg-white p-6 md:p-8 rounded-2xl shadow-sm border border-gray-100">
       <h2 className="text-2xl font-extrabold text-gray-900 mb-8 border-b border-gray-100 pb-4">
         {isEditing ? 'Редагування новели' : 'Створення нової новели'}
@@ -127,13 +130,7 @@ export const NovelForm = ({ initialData, novelId }: NovelFormProps) => {
               name="genreIds"
               control={control}
               render={({ field: { onChange, value } }) => (
-                <GenreSelector
-                  genres={availableGenres}
-                  selectedIds={value || []}
-                  onChange={onChange}
-                  max={5}
-                  disabled={isPending || availableGenres.length === 0}
-                />
+                <GenreSelector genres={availableGenres} selectedIds={value || []} onChange={onChange} max={5} disabled={isPending || availableGenres.length === 0} />
               )}
             />
             {errors.genreIds && <p className="text-red-500 text-xs mt-1.5">{errors.genreIds.message}</p>}
@@ -152,17 +149,33 @@ export const NovelForm = ({ initialData, novelId }: NovelFormProps) => {
         </div>
       </div>
 
-      <div className="flex flex-col sm:flex-row justify-end gap-3 mt-8 pt-6 border-t border-gray-100">
-        <Link href={isEditing ? `/studio/novels/${novelId}` : "/studio"} className="px-6 py-2.5 text-center text-slate-600 font-bold hover:bg-slate-50 rounded-xl">Скасувати</Link>
+      {/* ЗМІНЕНО: Панель кнопок (Видалити зліва, Скасувати/Зберегти справа) */}
+      <div className="flex flex-col-reverse sm:flex-row justify-between items-center gap-4 mt-8 pt-6 border-t border-gray-100">
+        <div>
+          {isEditing && (
+            <button
+              type="button"
+              onClick={() => { if(confirm('Ви впевнені, що хочете видалити цю новелу? Дія незворотна.')) deleteNovelMutation.mutate(); }}
+              disabled={isPending}
+              className="px-6 py-2.5 text-red-600 bg-red-50 hover:bg-red-100 font-bold rounded-xl transition-colors disabled:opacity-50"
+            >
+              {deleteNovelMutation.isPending ? 'Видалення...' : 'Видалити новелу'}
+            </button>
+          )}
+        </div>
 
-        {/* Залишили тільки одну правильну кнопку */}
-        <button
-          type="submit"
-          disabled={isPending}
-          className="bg-indigo-600 text-white px-8 py-2.5 rounded-xl font-bold hover:bg-indigo-700 disabled:opacity-50"
-        >
-          {isEditing ? 'Зберегти зміни' : 'Створити новелу'}
-        </button>
+        <div className="flex w-full sm:w-auto gap-3">
+          <Link href={isEditing ? `/studio/novels/${novelId}` : "/studio"} className="flex-1 sm:flex-none px-6 py-2.5 text-center text-slate-600 font-bold hover:bg-slate-50 rounded-xl transition-colors">
+            Скасувати
+          </Link>
+          <button
+            type="submit"
+            disabled={isPending}
+            className="flex-1 sm:flex-none bg-indigo-600 text-white px-8 py-2.5 rounded-xl font-bold hover:bg-indigo-700 disabled:opacity-50 transition-colors"
+          >
+            {isEditing ? 'Зберегти зміни' : 'Створити новелу'}
+          </button>
+        </div>
       </div>
     </form>
   );

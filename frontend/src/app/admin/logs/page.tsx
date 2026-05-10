@@ -14,20 +14,31 @@ export default function AdminAuditLogsPage() {
     queryFn: () => adminService.getAuditLogs(page, limit),
   });
 
+  // БЕЗПЕЧНЕ РОЗПАКУВАННЯ ДАНИХ (Вирішує проблему порожнього екрана)
+  const logsArray = data?.logs || data?.items || data?.data?.items || data?.data || [];
+  const totalCount = data?.total || data?.meta?.total || data?.data?.meta?.total || 0;
+  const totalPages = Math.max(1, Math.ceil(totalCount / limit));
+
   // Функція-помічник для красивого виводу дій
   const renderActionText = (log: any) => {
-    const actor = (
+    // Якщо актора чомусь немає (наприклад, видалений користувач), ставимо заглушку
+    const actorName = log.actor?.username || 'System';
+    const actor = log.actorId ? (
       <Link href={`/admin/users/${log.actorId}`} className="font-bold text-indigo-600 hover:underline">
-        @{log.actor.username}
+        @{actorName}
       </Link>
+    ) : (
+      <span className="font-bold text-gray-500">@{actorName}</span>
     );
 
     const targetTypeTranslation: Record<string, string> = {
       'USER': 'користувача',
       'NOVEL': 'новелу',
+      'CHAPTER': 'розділ',
       'COMMENT': 'коментар',
       'GENRE': 'жанр',
-      'TAG': 'тег'
+      'TAG': 'тег',
+      'REPORT': 'скаргу'
     };
     const translatedTarget = targetTypeTranslation[log.targetType] || log.targetType;
 
@@ -70,7 +81,7 @@ export default function AdminAuditLogsPage() {
           <p className="text-sm text-gray-500 mt-1">Історія всіх адміністративних дій на платформі</p>
         </div>
         <div className="text-sm text-gray-500 font-medium bg-white border border-gray-200 px-3 py-1.5 rounded-lg shadow-sm">
-          Всього записів: {data?.total || 0}
+          Всього записів: {totalCount}
         </div>
       </div>
 
@@ -91,14 +102,24 @@ export default function AdminAuditLogsPage() {
               </tr>
             ) : error ? (
               <tr>
-                <td colSpan={3} className="px-6 py-12 text-center text-red-500">Помилка завантаження логів</td>
+                <td colSpan={3} className="px-6 py-12 text-center text-red-500">
+                  Помилка завантаження логів: {(error as any)?.response?.data?.message || error.message}
+                </td>
               </tr>
-            ) : data?.logs?.length === 0 ? (
+            ) : logsArray.length === 0 ? (
               <tr>
-                <td colSpan={3} className="px-6 py-12 text-center text-gray-400">Жодних дій ще не зафіксовано.</td>
+                <td colSpan={3} className="px-6 py-16 text-center text-gray-500">
+                  <div className="flex flex-col items-center justify-center">
+                    <svg className="w-12 h-12 text-gray-300 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                    <span className="text-lg font-bold text-gray-900">Логи порожні</span>
+                    <span className="text-sm mt-1">Жодних адміністративних дій ще не зафіксовано.</span>
+                  </div>
+                </td>
               </tr>
             ) : (
-              data?.logs?.map((log: any) => (
+              logsArray.map((log: any) => (
                 <tr key={log.id} className="hover:bg-gray-50 transition-colors">
                   <td className="px-6 py-4 text-gray-500 whitespace-nowrap">
                     {new Date(log.createdAt).toLocaleString('uk-UA', {
@@ -130,10 +151,10 @@ export default function AdminAuditLogsPage() {
           Новіші
         </button>
         <span className="text-sm font-medium text-gray-600">
-          Сторінка {page} з {data ? Math.max(1, Math.ceil(data.total / limit)) : 1}
+          Сторінка {page} з {totalPages}
         </span>
         <button
-          disabled={!data || page >= Math.ceil(data.total / limit) || isLoading}
+          disabled={page >= totalPages || isLoading}
           onClick={() => setPage(p => p + 1)}
           className="px-4 py-2 border border-gray-200 rounded-lg text-sm font-medium disabled:opacity-50 hover:bg-gray-50 transition-colors bg-white shadow-sm"
         >
