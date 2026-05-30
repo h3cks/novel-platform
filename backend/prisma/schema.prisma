@@ -88,6 +88,8 @@ model Novel {
   flagged       Boolean     @default(false)
   createdAt     DateTime    @default(now())
   updatedAt     DateTime    @updatedAt
+  ratingScore   Float       @default(0)
+  totalVotes    Int         @default(0)
 
   // Зв'язки
   chapters  Chapter[]

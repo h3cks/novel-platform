@@ -169,7 +169,7 @@ export async function findNovels(opts: FindNovelsOptions) {
   let orderBy: any = { createdAt: 'desc' };
 
   if (opts.sort === 'recommended') {
-    orderBy = { id: 'desc' };
+    orderBy = { ratingScore: 'desc' };
   } else if (opts.sort === 'views_week' || opts.sort === 'views_day') {
     orderBy = { updatedAt: 'desc' };
   }

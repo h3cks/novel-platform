@@ -1,6 +1,7 @@
 // scripts/populate-languageRatio.ts
-import prisma from '../prisma/client'; // <- підкоригуйте шлях, якщо у вас інший
-import { stripHtml } from '../utils/text'; // використовуємо вашу утиліту для чистки html
+import prisma from '../prisma/client';
+import { stripHtml } from '../utils/text';
+import 'dotenv/config';
 
 function cyrillicRatio(text: string) {
   if (!text) return 0;
@@ -14,7 +15,7 @@ function cyrillicRatio(text: string) {
 }
 
 async function main() {
-  const batchSize = 500; // підлаштуйте під розмір БД / пам'ять
+  const batchSize = 500;
   let lastId = 0;
   let updated = 0;
 
@@ -37,12 +38,12 @@ async function main() {
       });
     });
 
-    // Виконуємо оновлення у транзакції (можна і без транзакцій для великих наборів)
+
     try {
       await prisma.$transaction(txUpdates);
     } catch (e) {
       console.error('Batch update failed (trying individual updates)...', e);
-      // fallback: оновити по одному, щоб не зупиняти весь процес
+
       for (const r of rows) {
         try {
           const plain = stripHtml(r.content ?? '');

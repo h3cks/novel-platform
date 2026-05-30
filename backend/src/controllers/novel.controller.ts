@@ -97,10 +97,40 @@ export const rateNovel = asyncHandler(async (req: Request, res: Response) => {
 
   if (score < 1 || score > 5) return res.status(400).json({ message: 'Invalid score' });
 
-  await prisma.rating.upsert({
-    where: { novelId_userId: { novelId, userId } },
-    update: { score },
-    create: { novelId, userId, score }
+  await prisma.$transaction(async (tx) => {
+    // 1. Зберігаємо або оновлюємо оцінку користувача
+    await tx.rating.upsert({
+      where: { novelId_userId: { novelId, userId } },
+      update: { score },
+      create: { novelId, userId, score }
+    });
+
+    // 2. Дістаємо всі оцінки для цієї новели
+    const allRatings = await tx.rating.findMany({
+      where: { novelId },
+      select: { score: true }
+    });
+
+    // 3. Рахуємо змінні для формули Байєса
+    const v = allRatings.length; // кількість голосів
+    const sum = allRatings.reduce((acc, curr) => acc + curr.score, 0);
+    const S = sum / v; // середнє арифметичне оцінок твору
+
+    const m = 5; // мінімальна кількість голосів (константа платформи)
+    const C = 3.5; // середній рейтинг по всій платформі (константа)
+
+    // 4. Застосовуємо формулу Байєса
+    // R = (v / (v + m)) * S + (m / (v + m)) * C
+    const R = (v / (v + m)) * S + (m / (v + m)) * C;
+
+    // 5. Денормалізація: зберігаємо результат безпосередньо в Novel
+    await tx.novel.update({
+      where: { id: novelId },
+      data: {
+        totalVotes: v,
+        ratingScore: Number(R.toFixed(2)) // округлюємо до 2 знаків
+      }
+    });
   });
 
   res.status(200).json({ success: true });
