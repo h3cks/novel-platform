@@ -1,18 +1,13 @@
 'use client';
 
-import { useAuthStore } from '@/features/auth/store/useAuthStore';
-import { useNovels } from '@/features/novels/hooks/useNovels';
+import { useStudioNovels } from '@/features/novels/hooks/useNovels';
 import Link from 'next/link';
 
-// 1. Прибираємо { novels } з параметрів. Тепер компонент нічого не вимагає.
 export const AuthorNovelList = () => {
-  // 2. Отримуємо поточного користувача зі стору
-  const user = useAuthStore((state) => state.user);
 
-  // 3. Завантажуємо новели (передаємо ID автора, щоб отримати тільки його твори)
-  const { data: novels, isLoading, isError } = useNovels({ authorId: user?.id });
+  // Звертаємося до нового хука
+  const { data: novels, isLoading, isError } = useStudioNovels();
 
-  // 4. Додаємо стан завантаження
   if (isLoading) {
     return <div className="text-center py-10 text-slate-500">Завантаження ваших новел...</div>;
   }
@@ -21,13 +16,10 @@ export const AuthorNovelList = () => {
     return <div className="text-center py-10 text-red-500">Помилка завантаження даних.</div>;
   }
 
-  // Безпечне витягнення масиву:
-  const novelsArray = Array.isArray(novels)
-    ? novels
-    : novels?.items || novels?.data?.items || novels?.data || [];
+  // ОСКІЛЬКИ СЕРВІС ВЖЕ ПОВЕРТАЄ МАСИВ, МИ ПРОСТО РОБИМО ФОЛБЕК НА ПУСТИЙ МАСИВ
+  const novelsArray = novels || [];
 
-  // Перевіряємо, чи масив не порожній (я об'єднав ваші два блоки if в один красивий)
-  if (!novelsArray || novelsArray.length === 0) {
+  if (novelsArray.length === 0) {
     return (
       <div className="bg-white border border-gray-200 rounded-lg p-12 text-center shadow-sm mt-4">
         <div className="w-16 h-16 bg-indigo-50 text-indigo-500 rounded-full flex items-center justify-center mx-auto mb-4">

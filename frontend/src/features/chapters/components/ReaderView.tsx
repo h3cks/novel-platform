@@ -8,7 +8,6 @@ import { useChapter } from '../hooks/useChapter';
 import { useReaderStore } from '@/store/useReaderStore';
 import { useAuthStore } from '@/features/auth/store/useAuthStore';
 import { chaptersService } from '../api/chapters.service';
-import { libraryService } from '@/features/library/api/library.service';
 import { ReaderSettings } from './ReaderSettings';
 import { CommentSection } from '@/features/comments/components/CommentSection';
 import { ReportModal } from '@/features/reports/components/ReportModal';
@@ -27,9 +26,46 @@ export const ReaderView = ({ novelId, chapterId }: ReaderViewProps) => {
   const { fontSize, theme } = useReaderStore();
   const [mounted, setMounted] = useState(false);
 
+  // Стани для віртуальної пагінації
+  const [pages, setPages] = useState<string[]>([]);
+  const [currentPage, setCurrentPage] = useState(0);
+
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  useEffect(() => {
+    if (chapter?.content) {
+
+      const rawSegments = chapter.content.split(/<\/p>|<br\s*\/?>|\n/i);
+      const newPages = [];
+      const PARAGRAPHS_PER_PAGE = 40;
+
+      for (let i = 0; i < rawSegments.length; i += PARAGRAPHS_PER_PAGE) {
+        const chunk = rawSegments.slice(i, i + PARAGRAPHS_PER_PAGE);
+
+        const pageContent = chunk
+          .filter(p => p.trim().length > 0)
+          .map(p => {
+            const trimmed = p.trim();
+            // Якщо сегмент вже має HTML-тег на початку, просто закриваємо його
+            if (trimmed.startsWith('<p') || trimmed.startsWith('<h')) {
+              return `${trimmed}</p>`;
+            }
+            // Якщо це звичайний текст, загортаємо його в <p>
+            return `<p>${trimmed}</p>`;
+          })
+          .join('');
+
+        if (pageContent.trim() !== '') {
+          newPages.push(pageContent);
+        }
+      }
+
+      setPages(newPages);
+      setCurrentPage(0);
+    }
+  }, [chapter?.content]);
 
   const { data: allChapters } = useQuery({
     queryKey: ['chapters', novelId],
@@ -43,7 +79,6 @@ export const ReaderView = ({ novelId, chapterId }: ReaderViewProps) => {
       router.push(`/novels/${novelId}`);
     }
   });
-
 
   if (isLoading) {
     return (
@@ -75,7 +110,7 @@ export const ReaderView = ({ novelId, chapterId }: ReaderViewProps) => {
     dark: 'dark bg-[#121212] text-gray-300',
   };
 
-  const activeThemeClass = mounted ? themeClasses[theme] : themeClasses.light;
+  const activeThemeClass = mounted ? themeClasses[theme as keyof typeof themeClasses] || themeClasses.light : themeClasses.light;
   const prevChapterId = chapter?.prevChapterId;
   const nextChapterId = chapter?.nextChapterId;
 
@@ -133,17 +168,43 @@ export const ReaderView = ({ novelId, chapterId }: ReaderViewProps) => {
         <ReaderSettings />
 
         <article>
-          <h1 className={`text-3xl sm:text-4xl font-extrabold mb-12 text-center leading-tight ${mounted && theme === 'dark' ? 'text-gray-100' : 'text-slate-900'}`}>
+          <h1 className="text-3xl sm:text-4xl font-extrabold mb-12 text-center">
             Розділ {chapter.order}: {chapter.title}
           </h1>
 
-          <div
-            className={`prose prose-lg max-w-none prose-headings:font-bold reader-content leading-relaxed ${
-              mounted && theme === 'dark' ? 'prose-invert' : ''
-            }`}
-            style={{ fontSize: mounted ? `${fontSize}px` : '18px' }}
-            dangerouslySetInnerHTML={{ __html: chapter.content }}
-          />
+          {/* ПОДВІЙНА САНІТИЗАЦІЯ (DOMPurify) */}
+          {pages.length > 0 && (
+            <div
+              className={`prose prose-lg max-w-none prose-headings:font-bold reader-content leading-relaxed ${
+                mounted && theme === 'dark' ? 'prose-invert' : ''
+              }`}
+              style={{ fontSize: mounted ? `${fontSize}px` : '18px' }}
+              dangerouslySetInnerHTML={{
+                __html: mounted ? DOMPurify.sanitize(pages[currentPage]) : ''
+              }}
+            />
+          )}
+
+          {/* КНОПКИ ПАГІНАЦІЇ */}
+          {pages.length > 1 && (
+            <div className="flex justify-center items-center gap-4 mt-8">
+              <button
+                onClick={() => setCurrentPage(p => Math.max(0, p - 1))}
+                disabled={currentPage === 0}
+                className="px-4 py-2 bg-gray-200 dark:bg-gray-800 rounded disabled:opacity-50 font-medium"
+              >
+                &larr; Попередня сторінка
+              </button>
+              <span className="font-bold">{currentPage + 1} / {pages.length}</span>
+              <button
+                onClick={() => setCurrentPage(p => Math.min(pages.length - 1, p + 1))}
+                disabled={currentPage === pages.length - 1}
+                className="px-4 py-2 bg-gray-200 dark:bg-gray-800 rounded disabled:opacity-50 font-medium"
+              >
+                Наступна сторінка &rarr;
+              </button>
+            </div>
+          )}
         </article>
 
         <div className="mt-16 pt-8 border-t border-gray-200/20 flex justify-between items-center">
@@ -154,7 +215,7 @@ export const ReaderView = ({ novelId, chapterId }: ReaderViewProps) => {
           ) : <div />}
 
           {nextChapterId ? (
-            <Link href={`/novels/${novelId}/chapters/${nextChapterId}`} className="px-6 py-2 bg-indigo-600 text-white hover:bg-indigo-700 transition">
+            <Link href={`/novels/${novelId}/chapters/${nextChapterId}`} className="px-6 py-2 bg-indigo-600 text-white hover:bg-indigo-700 transition font-medium">
               Наступний &rarr;
             </Link>
           ) : <span className="text-gray-400 italic">Це останній розділ</span>}

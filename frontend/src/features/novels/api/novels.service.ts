@@ -23,20 +23,29 @@ export const novelsService = {
     return data.data?.items || data.items || data.data || data || [];
   },
 
+  // НОВИЙ МЕТОД ДЛЯ СТУДІЇ АВТОРА
+  getMyStudioNovels: async (): Promise<Novel[]> => {
+    const { data } = await apiClient.get('/novels/studio/my');
+    return data.data?.items || data.items || [];
+  },
+
   getRecommended: async (): Promise<Novel[]> => {
-    const { data } = await apiClient.get('/novels?sort=recommended&limit=15');
+    // ДОДАНО: &status=PUBLISHED
+    const { data } = await apiClient.get('/novels?sort=recommended&limit=15&status=PUBLISHED');
 
     const items = data.data?.items || data.items || data.data || data || [];
     return Array.isArray(items) ? items : [];
   },
 
   getTopOfWeek: async (): Promise<Novel[]> => {
-    const { data } = await apiClient.get('/novels?sort=views_week&limit=15');
+    // ДОДАНО: &status=PUBLISHED
+    const { data } = await apiClient.get('/novels?sort=views_week&limit=15&status=PUBLISHED');
     return data.data?.items || data.items || [];
   },
 
   getTopOfDay: async (): Promise<Novel[]> => {
-    const { data } = await apiClient.get('/novels?sort=views_day&limit=15');
+    // ДОДАНО: &status=PUBLISHED
+    const { data } = await apiClient.get('/novels?sort=views_day&limit=15&status=PUBLISHED');
     return data.data?.items || data.items || [];
   },
 
@@ -74,4 +83,3 @@ export const novelsService = {
     await apiClient.delete(`/novels/${id}`);
   }
 };
-
