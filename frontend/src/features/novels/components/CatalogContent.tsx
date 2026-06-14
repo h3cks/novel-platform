@@ -23,7 +23,7 @@ export const CatalogContent = ({ filters }: CatalogContentProps) => {
   const { data, isLoading, isError } = useNovels({
     page,
     limit,
-    status: filters?.status || undefined,
+    status: filters?.status || 'PUBLISHED',
     sort: filters?.sort || undefined
   });
 

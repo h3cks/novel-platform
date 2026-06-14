@@ -33,6 +33,17 @@ export const RichTextEditor = ({ content, onChange, disabled = false }: RichText
     }
   }, [editor, disabled]);
 
+  // ДОДАНО: Цей блок вирішує проблему зникнення тексту при завантаженні сторінки!
+  useEffect(() => {
+    if (editor && content !== undefined) {
+      const currentContent = editor.getHTML();
+      // Оновлюємо редактор ТІЛЬКИ якщо контент дійсно прийшов і відрізняється
+      if (currentContent !== content && !(currentContent === '<p></p>' && content === '')) {
+        editor.commands.setContent(content, { emitUpdate: false });
+      }
+    }
+  }, [content, editor]);
+
   // РАННІЙ ВИХІД
   if (!editor) {
     return <div className="min-h-[400px] bg-gray-50 border border-gray-200 rounded-md animate-pulse"></div>;

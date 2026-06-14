@@ -8,12 +8,17 @@ const nextConfig = {
         port: '',
         pathname: '/**',
       },
-
       {
         protocol: 'http',
         hostname: 'localhost',
         port: '5000',
         pathname: '/**', // Дозволяє всі шляхи, включаючи /uploads/
+      },
+      {
+        protocol: 'https',
+        hostname: 'placehold.co', // Додаємо дозвіл для placehold.co
+        port: '',
+        pathname: '/**',
       },
     ],
   },

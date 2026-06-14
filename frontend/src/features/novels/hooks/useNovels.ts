@@ -2,13 +2,20 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { novelsService } from '../api/novels.service';
 import { Novel } from '../types';
 
-// ДОДАНО: params?: Record<string, any>
 export const useNovels = (params?: Record<string, any>) => {
   return useQuery({
-    // ДОДАНО: params у queryKey для коректного кешування
     queryKey: ['novels', params],
-    // ДОДАНО: передаємо params у сервіс
     queryFn: () => novelsService.getNovels(params),
+
+    enabled: params && 'authorId' in params ? !!params.authorId : true,
+  });
+};
+
+// НОВИЙ ХУК ДЛЯ СТУДІЇ АВТОРА
+export const useStudioNovels = () => {
+  return useQuery({
+    queryKey: ['studio-novels'],
+    queryFn: novelsService.getMyStudioNovels,
   });
 };
 
@@ -54,6 +61,8 @@ export const useCreateNovel = () => {
     mutationFn: novelsService.createNovel,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['novels'] });
+      // Оновлюємо студію при успішному створенні
+      queryClient.invalidateQueries({ queryKey: ['studio-novels'] });
     },
   });
 };

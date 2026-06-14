@@ -90,6 +90,20 @@ export const createNovel = asyncHandler(async (req: Request, res: Response) => {
   }
 });
 
+// НОВА ФУНКЦІЯ: Отримання новел виключно для Студії автора
+export const getMyStudioNovels = asyncHandler(async (req: Request, res: Response) => {
+  const user = (req as any).user;
+  if (!user) return fail(res, 401, 'UNAUTHORIZED', 'Unauthorized');
+
+  const items = await prisma.novel.findMany({
+    where: { authorId: user.id },
+    orderBy: { createdAt: 'desc' },
+    include: { author: { select: { username: true } } }
+  });
+
+  res.status(200).json({ success: true, data: { items } });
+});
+
 export const rateNovel = asyncHandler(async (req: Request, res: Response) => {
   const novelId = Number(req.params.id);
   const userId = (req as any).user.id;
@@ -161,20 +175,26 @@ export const removeBookmark = asyncHandler(async (req: Request, res: Response) =
 export const listNovels = asyncHandler(async (req: Request, res: Response) => {
   const page = Number(req.query.page) || 1;
   const limit = Number(req.query.limit) || 10;
-  const skip = (page - 1) * limit;
 
-  const [items, total] = await Promise.all([
-    prisma.novel.findMany({
-      where: { status: 'PUBLISHED' },
-      skip,
-      take: limit,
-      include: { author: { select: { username: true } } },
-      orderBy: { createdAt: 'desc' }
-    }),
-    prisma.novel.count({ where: { status: 'PUBLISHED' } })
-  ]);
+  const authorId = req.query.authorId ? Number(req.query.authorId) : undefined;
+  const q = req.query.q ? String(req.query.q) : undefined;
+  const status = req.query.status ? String(req.query.status) : undefined;
 
-  res.status(200).json({ success: true, data: { items, total, page, limit } });
+  const requester = (req as any).user;
+
+  const result = await novelService.findNovels({
+    page,
+    limit,
+    authorId,
+    q,
+    status,
+    requester
+  });
+
+  res.status(200).json({
+    success: true,
+    data: result
+  });
 });
 
 export const getNovel = asyncHandler(async (req: Request, res: Response) => {
@@ -319,4 +339,3 @@ export const deleteNovel = asyncHandler(async (req: Request, res: Response) => {
   await novelService.deleteNovel(id);
   return ok(res, { ok: true });
 });
-
